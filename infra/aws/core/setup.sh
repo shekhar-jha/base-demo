@@ -9,11 +9,6 @@ export ENV_NAME="NEW"
 export TF_DOWNLOAD_PLUGIN=true
 export env_name=$(echo "${ENV_NAME}" | tr '[:upper:]' '[:lower:]')
 
-# export NEW_AWS_ACCESS_KEY_ID=AKIAZR5HGZTVFVXRQ2LW
-# export NEW_AWS_ACCESS_KEY_SECRET=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
-# export NEW_AWS_PROFILE=core-infra
-# export AWS_DEFAULT_REGION='us-east-1'
-# export AWS_REGION='us-east-1'
 AWSInit NEW 'us-east-1' profile core-infra
 
 PGPKeyExistsInStore "${env_name}" 'KEY' 'AWS'
