@@ -5,16 +5,56 @@
 . ../../scripts/infra.sh
 . ../../scripts/tf.sh
 
-export ENV_NAME="NEW"
-export TF_DOWNLOAD_PLUGIN=true
+usage() { echo "Usage: $0 -e <environment name> -c <aws profile> [-d]" 1>&2; exit 1;}
+while getopts ":e:c:d" options;
+do
+  case "${options}" in
+    e)
+      ENV_NAME="${OPTARG}"
+      if [[ "${ENV_NAME}" == "" ]];
+      then
+        usage
+      fi
+      ;;
+    c)
+      CLOUD_PROFILE="${OPTARG}"
+      if [[ "${CLOUD_PROFILE}" == "" ]];
+      then
+        usage
+      fi
+      ;;
+    d)
+      TF_DOWNLOAD_PLUGIN=true
+      ;;
+    :)
+      echo "Error: -${OPTARG} requires an argument."
+      usage
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done 
+
+if [[ "${ENV_NAME}" == "" ]];
+then
+  usage
+fi
+if [[ "${CLOUD_PROFILE}" == "" ]];
+then
+  usage
+fi
+
+export ENV_NAME="${ENV_NAME:-NEW}"
+export TF_DOWNLOAD_PLUGIN=${TF_DOWNLOAD_PLUGIN:-false}
 export env_name=$(echo "${ENV_NAME}" | tr '[:upper:]' '[:lower:]')
 
-# export NEW_AWS_ACCESS_KEY_ID=AKIAZR5HGZTVFVXRQ2LW
-# export NEW_AWS_ACCESS_KEY_SECRET=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
-# export NEW_AWS_PROFILE=core-infra
-# export AWS_DEFAULT_REGION='us-east-1'
-# export AWS_REGION='us-east-1'
-AWSInit NEW 'us-east-1' profile core-infra
+AWSInit "${ENV_NAME}" 'us-east-1' profile "${CLOUD_PROFILE}"
+if [[ $? -ne 0 ]];
+then
+  echo "Failed to setup AWS using profile ${CLOUD_PROFILE}"
+  exit 2
+fi
 
 PGPKeyExistsInStore "${env_name}" 'KEY' 'AWS'
 key_exists_in_store=$?

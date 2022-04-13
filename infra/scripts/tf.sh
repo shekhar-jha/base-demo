@@ -40,7 +40,7 @@ function TFCleanup {
   local TF_VARS="${TF_BASE}/terraform.tfvars"
   local TF_BACKEND_CFG="${TF_BASE}/backend.cfg"
   local TF_DOWNLOAD_PLUGIN="${TF_DOWNLOAD_PLUGIN:-false}"
-  rm "${TF_BASE}/*tf"
+  rm "${TF_BASE}"/*tf
   rm -rf "${TF_BASE}/.terraform/providers"
 }
 
