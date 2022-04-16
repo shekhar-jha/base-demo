@@ -31,3 +31,6 @@ override.tf.json
 
 # GNU PGP Key artifacts
 *gpg*
+
+# Intellij files
+.idea/
