@@ -3,6 +3,9 @@ SCRIPT_DEFAULT_HOME=$(cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}" )" &> /dev/nu
 PGP_DEFAULT_HOME=$(pwd)
 PGP_DEFAULT_KEY_NAME_SUFFIX="${PGP_KEY_NAME_SUFFIX:-tf-gpg-key}"
 PGP_DEFAULT_PUB_NAME_SUFFIX="${PGP_PUB_NAME_SUFFIX:-tf-gpg-pub}"
+PGP_DEFAULT_KEY_FILE_SUFFIX="key"
+PGP_DEFAULT_PUB_FILE_SUFFIX="pub"
+PGP_DEFAULT_OUT_FILE_SUFFIX="out"
 
 . "${SCRIPT_DEFAULT_HOME}"/basic.sh
 
@@ -59,7 +62,7 @@ function PGPKeyFileExists {
     PUB)  
       local PGP_KEY_NAME
       PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "PUB")
-      local PGP_FILE_KEY="${PGP_KEY_NAME}.pub"
+      local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_PUB_FILE_SUFFIX}"
       ;;
     
     *)
@@ -88,13 +91,13 @@ function PGPDeleteKeyFile {
     KEY)
       local PGP_KEY_NAME 
       PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "KEY")
-      local PGP_FILE_KEY="${PGP_KEY_NAME}.key"
+      local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_KEY_FILE_SUFFIX}"
       ;;
     
     PUB)  
       local PGP_KEY_NAME 
       PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "PUB")
-      local PGP_FILE_KEY="${PGP_KEY_NAME}.pub"
+      local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_PUB_FILE_SUFFIX}"
       ;;
     
     *)
@@ -136,8 +139,8 @@ function PGPCreateKeys {
   PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "KEY")
   local PGP_PUB_NAME 
   PGP_PUB_NAME=$(PGPKeyName "${PGP_SCOPE}" 'PUB')
-  local PGP_FILE_KEY="${PGP_KEY_NAME}.key"
-  local PGP_FILE_PUB="${PGP_PUB_NAME}.pub"
+  local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_KEY_FILE_SUFFIX}"
+  local PGP_FILE_PUB="${PGP_PUB_NAME}.${PGP_DEFAULT_PUB_FILE_SUFFIX}"
   local PGP_PATH_KEY="${PGP_HOME}/${PGP_FILE_KEY}"
   local PGP_PATH_PUB="${PGP_HOME}/${PGP_FILE_PUB}"
   local PGP_PATH_KEY_TEMPL="${PGP_PATH_HOME_DIR}/${PGP_SCOPE}-gpg.tmpl"
@@ -180,12 +183,12 @@ function PGPKeyExistsInStore {
   case $PGP_TYPE in 
     KEY)
       local PGP_KEY_NAME
-      PGP_KEY_NAME="${PGP_SCOPE}-${PGP_DEFAULT_KEY_NAME_SUFFIX}"
+      PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "KEY")
       ;;
     
     PUB)  
       local PGP_KEY_NAME
-      PGP_KEY_NAME="${PGP_SCOPE}-${PGP_DEFAULT_PUB_NAME_SUFFIX}"
+      PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "PUB")
       ;;
     
     *)
@@ -227,14 +230,14 @@ function PGPStoreKeys {
     KEY)
       local PGP_KEY_NAME
       PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "KEY")
-      local PGP_FILE_KEY="${PGP_KEY_NAME}.key"
+      local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_KEY_FILE_SUFFIX}"
       local PGP_PATH_KEY="${PGP_HOME}/${PGP_FILE_KEY}"
       ;;
     
     PUB)  
       local PGP_KEY_NAME
       PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "PUB")
-      local PGP_FILE_KEY="${PGP_KEY_NAME}.pub"
+      local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_PUB_FILE_SUFFIX}"
       local PGP_PATH_KEY="${PGP_HOME}/${PGP_FILE_KEY}"
       ;;
     
@@ -278,13 +281,13 @@ function PGPGetKey {
     KEY)
       local PGP_KEY_NAME
       PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "KEY")
-      local PGP_FILE_KEY="${PGP_KEY_NAME}.key"
+      local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_KEY_FILE_SUFFIX}"
       ;;
     
     PUB)  
       local PGP_KEY_NAME
       PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "PUB")
-      local PGP_FILE_KEY="${PGP_KEY_NAME}.pub"
+      local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_PUB_FILE_SUFFIX}"
       ;;
     
     *)
@@ -311,15 +314,44 @@ function PGPGetKey {
   return 0
 }
 
+function PGPGetKeyIfNotExists {
+  if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ];
+  then
+    echo 'PGPGetKeyIfNotExists <SCOPE> <Type: KEY|PUB> <Store type: AWS|GCP> [<PGP_HOME:'" ${PGP_DEFAULT_HOME}"'>] [<Exit on failure: Yes*|No>]'
+    return -1
+  fi
+  local exitOnFailure="${5:-Yes}"
+  local key_file_exists
+  PGPKeyFileExists "${1}" "${2}" "${4}"; key_file_exists=$?
+  if [ $key_file_exists -eq 1 ];
+  then
+    PGPGetKey "${1}" "${2}" ${3} "${4}"; key_get_key=$?
+    if [ $key_get_key -ne 0 ];
+    then
+      echo "PGPGetKeyIfNotExists: Failed to get key due to error ${$key_get_key}"
+      case "${exitOnFailure}" in
+        n|N|no|No)
+          return -2
+          ;;
+        yes|Yes|y|*)
+          exit
+          ;;
+      esac
+    fi
+  fi
+}
+
 function PGPDecrypt {
   if [[ "${1}" == "" ]];
   then
-    echo 'PGPDecrypt <Scope> [<File>] [<PGP_HOME:'" ${PGP_DEFAULT_HOME}"'>]'
+    echo "PGPDecrypt <Scope> [<File name without $
+    }{PGP_DEFAULT_OUT_FILE_SUFFIX}>] [<PGP_HOME: ${PGP_DEFAULT_HOME}>]"
     return -1
   fi
   local PGP_SCOPE=${1}
   local PGP_FILE=${2}
   local PGP_HOME="${3:-$PGP_DEFAULT_HOME}"
+  local PGP_FILE_OUT="${PGP_FILE}.${PGP_DEFAULT_OUT_FILE_SUFFIX}"
   local PGP_PATH_HOME_DIR="${PGP_HOME}/.gpg"
   if [ ! -d "${PGP_PATH_HOME_DIR}" ];
   then
@@ -328,7 +360,7 @@ function PGPDecrypt {
   fi
   local PGP_KEY_NAME
   PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "KEY")
-  local PGP_FILE_KEY="${PGP_KEY_NAME}.key"
+  local PGP_FILE_KEY="${PGP_KEY_NAME}.${PGP_DEFAULT_KEY_FILE_SUFFIX}"
   local PGP_PATH_KEY="${PGP_HOME}/${PGP_FILE_KEY}"
   local import_key_status
   import_key_status=$(gpg --homedir "${PGP_PATH_HOME_DIR}" --import "${PGP_PATH_KEY}" 2>&1)
@@ -342,17 +374,19 @@ function PGPDecrypt {
   fi
   if [[ "${PGP_FILE}" != "" ]];
   then
-    if [[ ! -f "${PGP_FILE}" ]];
+    if [[ ! -f "${PGP_FILE_OUT}" ]];
     then
-      echo "PGPDecrypt: Failed to decrypt file ${PGP_FILE} since it does not exist."
+      echo "PGPDecrypt: Failed to decrypt file ${PGP_FILE_OUT} since it does not exist. Please ensure that you profile file name without the .${PGP_DEFAULT_OUT_FILE_SUFFIX} suffix."
       rm -rf "${PGP_PATH_HOME_DIR}"
       return -3
     fi
-    cat "${PGP_FILE}" | gpg --homedir "${PGP_PATH_HOME_DIR}" -d 
+    local decrypt_status
+    decrypt_status=$(gpg --homedir "${PGP_PATH_HOME_DIR}" -d -o "${PGP_FILE}" "${PGP_FILE_OUT}" 2>&1)
     local decrypt_ret_code=$?
     if [[ $decrypt_ret_code -ne 0 ]];
     then 
-      echo "PGPDecrypt: Failed to decrypt file ${PGP_FILE} due to error ${decrypt_ret_code}"
+      echo "PGPDecrypt: Failed to decrypt file ${PGP_FILE_OUT} due to error ${decrypt_ret_code}"
+      echo "${decrypt_status}"
       rm -rf "${PGP_PATH_HOME_DIR}"
       return -4
     fi
@@ -369,3 +403,63 @@ function PGPDecrypt {
   rm -rf "${PGP_PATH_HOME_DIR}"
 }
 
+function PGPEncrypt {
+  if [[ "${1}" == "" ]];
+  then
+    echo 'PGPEncrypt <Scope> [<File>] [<PGP_HOME:'" ${PGP_DEFAULT_HOME}"'>]'
+    return -1
+  fi
+  local PGP_SCOPE=${1}
+  local PGP_FILE=${2}
+  local PGP_HOME="${3:-$PGP_DEFAULT_HOME}"
+  local PGP_FILE_OUT="${PGP_FILE}.${PGP_DEFAULT_OUT_FILE_SUFFIX}"
+  local PGP_PATH_HOME_DIR="${PGP_HOME}/.gpg"
+  if [ ! -d "${PGP_PATH_HOME_DIR}" ];
+  then
+    mkdir -p "${PGP_PATH_HOME_DIR}"
+    chmod 700 "${PGP_PATH_HOME_DIR}"
+  fi
+  local PGP_PUB_NAME
+  PGP_PUB_NAME=$(PGPKeyName "${PGP_SCOPE}" "PUB")
+  local PGP_FILE_PUB="${PGP_PUB_NAME}.${PGP_DEFAULT_PUB_FILE_SUFFIX}"
+  local PGP_PATH_PUB="${PGP_HOME}/${PGP_FILE_PUB}"
+  local import_key_status
+  import_key_status=$(gpg --homedir "${PGP_PATH_HOME_DIR}" --import "${PGP_PATH_PUB}" 2>&1)
+  import_key_ret_code=$?
+  if [[ $import_key_ret_code -ne 0 ]];
+  then
+    echo "PGPEncrypt: Failed to import key to PGP store at ${PGP_PATH_HOME_DIR} due to error ${import_key_ret_code}"
+    echo "${import_key_status}"
+    rm -rf "${PGP_PATH_HOME_DIR}"
+    return -2
+  fi
+  if [[ "${PGP_FILE}" != "" ]];
+  then
+    if [[ ! -f "${PGP_FILE}" ]];
+    then
+      echo "PGPEncrypt: Failed to encrypt file ${PGP_FILE} since it does not exist."
+      rm -rf "${PGP_PATH_HOME_DIR}"
+      return -3
+    fi
+    local encrypt_status
+    encrypt_status=$(gpg --homedir "${PGP_PATH_HOME_DIR}" -e -o "${PGP_FILE_OUT}" "${PGP_FILE}")
+    local encrypt_ret_code=$?
+    if [[ $encrypt_ret_code -ne 0 ]];
+    then 
+      echo "PGPEncrypt: Failed to encrypt file ${PGP_FILE} due to error ${encrypt_ret_code}"
+      echo "${encrypt_status}"
+      rm -rf "${PGP_PATH_HOME_DIR}"
+      return -4
+    fi
+  else
+    gpg --homedir "${PGP_PATH_HOME_DIR}" -d
+    local encrypt_ret_code=$?
+    if [[ $encrypt_ret_code -ne 0 ]];
+    then
+      echo "PGPEncrypt: Failed to encrypt input due to error ${encrypt_ret_code}"
+      rm -rf "${PGP_PATH_HOME_DIR}"
+      return -5 
+    fi
+  fi
+  rm -rf "${PGP_PATH_HOME_DIR}"
+}
