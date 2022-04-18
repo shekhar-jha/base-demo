@@ -47,3 +47,25 @@ function IsAvailable {
   return 0
 }
 
+function ReturnOrExit {
+  if [[ "${1}" == "" ]] || [[ "${2}" == "" ]] || [[ "${3}" == "" ]];
+  then
+    echo 'ReturnOrExit <Type: Return|Exit> <Exit Code> <Return Code>'
+    exit 2
+  fi
+  local REQUESTED_RETURN_TYPE="${1:-Exit}"
+  local REQUESTED_EXIT_CODE="${2:-0}"
+  local EXIT_CODE=$((REQUESTED_EXIT_CODE + 0))
+  local REQUESTED_RETURN_CODE="${3:-0}"
+  local RETURN_CODE=$((REQUESTED_RETURN_CODE + 0))
+  case "${REQUESTED_RETURN_TYPE}" in
+    r|R|Return|return)
+      return $RETURN_CODE
+      ;;
+
+    e|E|Exit|exit|*)
+      exit $EXIT_CODE
+      ;;
+  esac
+  exit $EXIT_CODE
+}
