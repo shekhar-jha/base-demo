@@ -34,3 +34,6 @@ override.tf.json
 
 # Intellij files
 .idea/
+
+# Output files
+*.out
