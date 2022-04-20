@@ -1,23 +1,23 @@
 
 SCRIPT_DEFAULT_HOME=$(cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}" )" &> /dev/null && pwd)
-STORE_DEFAULT_HOME=$(pwd)
+# STORE_DEFAULT_HOME=$(pwd)
 
 . "${SCRIPT_DEFAULT_HOME}"/basic.sh
 
 function StoreKey {
   if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ] || [ "${4}" == "" ];
   then
-    echo "StoreKey <Scope> <Store type: AWS|GCP> <Key name> <Key Value> [<Value type: [F|f]ile*|[S|s]tring>]" 
-    return -1
+    echo "StoreKey <Scope> <Store type: AWS|GCP> <Key name> <Key Value> [<Value type: [F|f]ile*|[S|s]tring>] [<Return: Exit*|Return>] [Exit code]"
+    ReturnOrExit "${6:-Exit}" "${7:-1}" "1"; return $?
   fi
   local STORE_SCOPE="${1}"
   local STORE_TYPE="${2}"
   local STORE_KEY="${3}"
-  local STORE_VALUE="${4}" 
+  local STORE_VALUE="${4}"
   local STORE_VALUE_TYPE="${5:-F}"
-  
+
   case "${STORE_TYPE}" in
-    
+
     AWS)
       . "${SCRIPT_DEFAULT_HOME}"/aws.sh
       IsAvailable f AWSStoreKey "AWSStoreKey function"
@@ -28,28 +28,28 @@ function StoreKey {
       then
         echo "Failed to store key in AWS due to error ${awsStoreKey_ret_code}"
         echo "${awsStoreKey_status}"
-        return -2
+        ReturnOrExit "${6:-Exit}" "${7:-1}" "2"; return $?
       fi
       ;;
 
     *)
       echo "StoreKey: Only AWS Store type is currently supported."
-      exit
-      ;; 
+      ReturnOrExit "${6:-Exit}" "${7:-1}" "3"; return $?
+      ;;
   esac
 }
 
 function StoreKeyExists {
   if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ];
   then
-    echo "StoreKey <Scope> <Store type: AWS|GCP> <Key name>" 
-    return -1
+    echo "StoreKey <Scope> <Store type: AWS|GCP> <Key name> [<Return: Exit*|Return>] [Exit code]"
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "3"; return $?
   fi
   local STORE_SCOPE="${1}"
   local STORE_TYPE="${2}"
   local STORE_KEY="${3}"
   case "${STORE_TYPE}" in
-    
+
     AWS)
       . "${SCRIPT_DEFAULT_HOME}"/aws.sh
       IsAvailable f AWSContainsKey "AWSContainsKey function"
@@ -63,14 +63,14 @@ function StoreKeyExists {
       then
         return 1
       else
-        return -2
+        ReturnOrExit "${4:-Exit}" "${5:-1}" "2"; return $?
       fi
       ;;
 
     *)
       echo "StoreKeyExists: Only AWS Store type is currently supported."
-      exit
-      ;; 
+      ReturnOrExit "${4:-Exit}" "${5:-1}" "4"; return $?
+      ;;
   esac
 
 }
@@ -78,17 +78,17 @@ function StoreKeyExists {
 function GetStoredKey {
   if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ] || [ "${4}" == "" ];
   then
-    echo "StoreKey <Scope> <Store type: AWS|GCP> <Key name> <Key Value> [<Value type: [F|f]ile*|[S|s]tring>]" 
-    return -1
+    echo "GetStoredKey <Scope> <Store type: AWS|GCP> <Key name> <Key Value> [<Value type: [F|f]ile*|[S|s]tring>] [<Return: Exit*|Return>] [Exit code]"
+    ReturnOrExit "${6:-Exit}" "${7:-1}" "1"; return $?
   fi
   local STORE_SCOPE="${1}"
   local STORE_TYPE="${2}"
   local STORE_KEY="${3}"
-  local STORE_VALUE="${4}" 
+  local STORE_VALUE="${4}"
   local STORE_VALUE_TYPE="${5:-F}"
-  
+
   case "${STORE_TYPE}" in
-    
+
     AWS)
       . "${SCRIPT_DEFAULT_HOME}"/aws.sh
       IsAvailable f AWSGetKey "AWSGetKey function"
@@ -96,18 +96,86 @@ function GetStoredKey {
       local awsGetKey_ret_code=$?
       if [ $awsGetKey_ret_code -ne 0 ];
       then
-        echo "Failed to read key from AWS due to error ${awsGetKey_ret_code}"
+        echo "GetStoredKey: Failed to read key from AWS due to error ${awsGetKey_ret_code}"
         echo "${awsGetKeyValue}"
-        return -2
+        ReturnOrExit "${6:-Exit}" "${7:-1}" "2"; return $?
       else
         echo "${awsGetKeyValue}"
       fi
       ;;
 
     *)
-      echo "GetKey: Only AWS Store type is currently supported."
-      exit
-      ;; 
+      echo "GetStoredKey: Only AWS Store type is currently supported."
+      ReturnOrExit "${6:-Exit}" "${7:-1}" "3"; return $?
+      ;;
   esac
 }
 
+function StoreFile {
+  if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ] || [ "${4}" == "" ];
+  then
+    echo "StoreFile <Scope> <Store type: AWS|GCP> <Source file path> <destination file location> [<Return: Exit*|Return>] [Exit code]"
+    ReturnOrExit "${5:-Exit}" "${6:-1}" "1"; return $?
+  fi
+  local STORE_SCOPE="${1}"
+  local STORE_TYPE="${2}"
+  local STORE_FILE_SRC="${3}"
+  local STORE_FILE_DEST="${4}"
+
+  case "${STORE_TYPE}" in
+
+    AWS)
+      . "${SCRIPT_DEFAULT_HOME}"/aws.sh
+      IsAvailable f AWSStoreFile "AWSStoreFile function"
+      local awsStoreFile_status
+      awsStoreFile_status=$(AWSStoreFile "${STORE_SCOPE}" "${STORE_FILE_SRC}" "${STORE_FILE_DEST}")
+      local awsStoreFile_ret_code=$?
+      if [ $awsStoreFile_ret_code -ne 0 ];
+      then
+        echo "Failed to store file in AWS due to error ${awsStoreFile_ret_code}"
+        echo "${awsStoreFile_status}"
+        ReturnOrExit "${5:-Exit}" "${6:-1}" "2"; return $?
+      fi
+      ;;
+
+    *)
+      echo "StoreFile: Only AWS Store type is currently supported."
+      ReturnOrExit "${5:-Exit}" "${6:-1}" "3"; return $?
+      ;;
+  esac
+}
+
+function GetStoredFile {
+  if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ] || [ "${4}" == "" ];
+  then
+    echo "GetStoredFile <Scope> <Store type: AWS|GCP> <source file> <destination path> [<Return: Exit*|Return>] [Exit code]"
+    ReturnOrExit "${5:-Exit}" "${6:-1}" "1"; return $?
+  fi
+  local STORE_SCOPE="${1}"
+  local STORE_TYPE="${2}"
+  local STORE_FILE_NAME="${3}"
+  local STORE_FILE_PATH="${4}"
+
+  case "${STORE_TYPE}" in
+
+    AWS)
+      . "${SCRIPT_DEFAULT_HOME}"/aws.sh
+      IsAvailable f AWSGetFile "AWSGetFile function"
+      awsGetFileValue=$(AWSGetFile "${STORE_SCOPE}" "${STORE_FILE_NAME}" "${STORE_FILE_PATH}")
+      local awsGetFile_ret_code=$?
+      if [ $awsGetFile_ret_code -ne 0 ];
+      then
+        echo "GetStoredFile: Failed to read key from AWS due to error ${awsGetKey_ret_code}"
+        echo "${awsGetFileValue}"
+        ReturnOrExit "${5:-Exit}" "${6:-1}" "2"; return $?
+      else
+        echo "${awsGetFileValue}"
+      fi
+      ;;
+
+    *)
+      echo "GetStoredFile: Only AWS Store type is currently supported."
+      ReturnOrExit "${5:-Exit}" "${6:-1}" "3"; return $?
+      ;;
+  esac
+}

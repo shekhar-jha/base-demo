@@ -39,3 +39,6 @@ resource "aws_s3_bucket_public_access_block" "aws_s3_tf_state" {
 output "aws_s3_tf_state_id" {
   value = aws_s3_bucket.aws_s3_tf_state.id
 }
+output "STATE_BUCKET_ID" {
+  value = aws_s3_bucket.aws_s3_tf_state.id
+}
