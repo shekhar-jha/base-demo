@@ -4,6 +4,7 @@ locals {
 
 resource "aws_s3_bucket" "aws_s3_tf_state" {
   bucket = local.aws_s3_tf_state_bucket
+  force_destroy = true
   tags = {
     Name = "${var.ENV_NAME} Terraform State Bucket"
     Environment = "${var.ENV_NAME}"

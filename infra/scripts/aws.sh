@@ -88,6 +88,7 @@ function AWSInit {
         return $?
       else
         echo "AWSInit: Profile ${AWS_PROFILE} region set to ${profile_region}"
+        export AWS_REGION="${profile_region}"
       fi
     else
       echo "AWSInit: No AWS default region specified for configuration. Please pass the region name either as parameter or environment variable ${AWS_PROFILE_ENV_NAME}"
@@ -281,5 +282,49 @@ function AWSGetFile {
     return $?
   else
     echo "AWSGetFile: Downloaded file to ${AWS_S3_FILE_PATH}"
+  fi
+}
+
+function AWSGetResource {
+  if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ]; then
+    echo 'AWSGetFile <Scope> <Resource Type: SecretVault|FileStore> <Resource Name> [<Return: Exit*|Return>] [Exit code]'
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "1"
+    return $?
+  fi
+  local AWS_SCOPE="${1}"
+  local AWS_RES_TYPE="${2}"
+  local AWS_RES_NAME="${3}"
+  local AWS_RES_CMD
+  local AWS_RES_QUERY
+  case "${AWS_RES_TYPE}" in
+
+    SecretVault|secretvault|vault)
+      AWS_RES_CMD="secretsmanager list-secrets"
+      AWS_RES_QUERY="SecretList[?contains(Name, "'`'"${AWS_RES_NAME}"'`'")].Name"
+      ;;
+
+    FileStore|filestore|file)
+      AWS_RES_CMD="s3api list-buckets"
+      AWS_RES_QUERY="Buckets[?contains(Name,"'`'"${AWS_RES_NAME}"'`'")].Name"
+      ;;
+
+    *)
+      echo "Only SecretVault and FileStore resource types are currently supported."
+      ReturnOrExit "${4:-Exit}" "${5:-1}" "2"
+      return $?
+      ;;
+  esac
+  AWS_CMD="aws ${AWS_RES_CMD} --query ${AWS_RES_QUERY} --output text"
+  local aws_cmd_status
+  aws_cmd_status=$($AWS_CMD)
+  local aws_cmd_ret_code=$?
+  if [[ $aws_cmd_ret_code -ne 0 ]];
+  then
+    echo "Failed to get the name of resource ${AWS_RES_TYPE} matching name ${AWS_RES_NAME} due to error code ${aws_cmd_ret_code}"
+    echo "${aws_cmd_status}"
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "3"
+    return $?
+  else
+    echo "${aws_cmd_status}"
   fi
 }

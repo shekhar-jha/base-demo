@@ -51,12 +51,14 @@ function InfraInit {
 function InfraApply {
   if [ "${1}" == "" ] || [ "${2}" == "" ];
   then
-    echo 'InfraApply <Scope> <Infra config type: Terraform> [<Target: name of specific resource>] [<INFRA_HOME:'" ${INFRA_DEFAULT_HOME}"'>] [<Return: Exit*|Return>] [Exit code]'
-    ReturnOrExit "${5:-Exit}" "${6:-1}" "1"; return $?
+    echo 'InfraApply <Scope> <Infra config type: Terraform> [<Operation: Update*|Destroy|Replace] [<Target: name of specific resource>] [<INFRA_HOME:'" ${INFRA_DEFAULT_HOME}"'>] [<Return: Exit*|Return>] [Exit code]'
+    ReturnOrExit "${6:-Exit}" "${7:-1}" "1"; return $?
   fi
+  local RETURN_VALUE=0
   local INFRA_SCOPE="${1}"
   local INFRA_TYPE="${2}"
-  local INFRA_TARGET="${3}"
+  local INFRA_OPS="${3:-Update}"
+  local INFRA_TARGET="${4}"
   local INFRA_HOME="${4:-$INFRA_DEFAULT_HOME}"
   echo "Applying change to ${INFRA_TYPE} state for ${INFRA_SCOPE}..."
   case "${INFRA_TYPE}" in
@@ -65,24 +67,32 @@ function InfraApply {
       . "${SCRIPT_DEFAULT_HOME}/tf.sh"
       IsAvailable f TFApply "Terraform apply (TFApply) function"
       local tfApply_status
-      tfApply_status=$(TFApply "${INFRA_SCOPE}" 'Update' "${INFRA_TARGET}" "${INFRA_HOME}")
+      tfApply_status=$(TFApply "${INFRA_SCOPE}" "${INFRA_OPS}" "${INFRA_TARGET}" "${INFRA_HOME}" 2>&1)
       local tfApply_ret_code=$?
-      if [ $tfApply_ret_code -ne 0 ];
+      if [ $tfApply_ret_code -eq 1 ];
+      then
+        RETURN_VALUE=1
+        echo "${tfApply_status}"
+      fi
+      if [ $tfApply_ret_code -gt 1 ];
       then
         echo "InfraApply: Failed to apply infrastructure using terraform due to error ${tfApply_ret_code}"
         echo "${tfApply_status}"
-        ReturnOrExit "${5:-Exit}" "${6:-1}" "2"; return $?
-      else
+        ReturnOrExit "${6:-Exit}" "${7:-1}" "2"; return $?
+      fi
+      if [ $tfApply_ret_code -eq 0 ];
+      then
         echo "${tfApply_status}"
       fi
       ;;
 
     *)
       echo "InfraApply: Only terraform infra type is currently supported."
-      ReturnOrExit "${5:-Exit}" "${6:-1}" "3"; return $?
+      ReturnOrExit "${6:-Exit}" "${7:-1}" "3"; return $?
       ;;
   esac
   echo "Applied change to ${INFRA_TYPE} state for ${INFRA_SCOPE}."
+  return $RETURN_VALUE
 } 
 
 function InfraGetConfig {
@@ -147,7 +157,9 @@ function InfraSaveState {
     local INFRA_HOME="${5:-$INFRA_DEFAULT_HOME}"
     local INFRA_STATE_FILE_NAME
     local INFRA_STATE_FILE_PATH
+    local INFRA_BASE
     echo "Saving ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE} to ${INFRA_STATE_STORE_NAME} on ${INFRA_STATE_STORE_NAME}"
+    echo "Cleaning up key files..."
     case "${INFRA_CONFIG_TYPE}" in
       t|T|Terraform|terraform)
         . "${SCRIPT_DEFAULT_HOME}/tf.sh"
@@ -156,6 +168,10 @@ function InfraSaveState {
         IsAvailable f TFStatePackFilePath "TFStatePackFilePath function"
         INFRA_STATE_FILE_NAME=$(TFStatePackFileName "${INFRA_SCOPE}")
         INFRA_STATE_FILE_PATH=$(TFStatePackFilePath "${INFRA_SCOPE}")
+        INFRA_BASE=$(TFHome "${INFRA_SCOPE}")
+        . "${SCRIPT_DEFAULT_HOME}/pgp.sh"
+        IsAvailable f PGPDeleteKeyFile "PGPDeleteKeyFile function"
+        PGPDeleteKeyFile "${INFRA_SCOPE}" 'PUB' "${INFRA_BASE}"
         TFStatePack "${INFRA_SCOPE}"
         pack_ret_code=$?
         if [[ $pack_ret_code -ne 0 ]];
@@ -242,7 +258,7 @@ function InfraLoadState {
     local INFRA_HOME="${5:-$INFRA_DEFAULT_HOME}"
     local INFRA_STATE_FILE_NAME
     local INFRA_STATE_FILE_PATH
-    echo "Loading ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE} from ${INFRA_STATE_STORE_NAME} on ${INFRA_STATE_STORE_NAME}"
+    echo "Loading ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE} from ${INFRA_STATE_STORE_NAME} on ${INFRA_STATE_BACKEND_TYPE}"
     case "${INFRA_CONFIG_TYPE}" in
       t|T|Terraform|terraform)
         . "${SCRIPT_DEFAULT_HOME}/tf.sh"
@@ -339,13 +355,11 @@ function InfraCleanup {
   local INFRA_TYPE="${2}"
   local INFRA_KEY_BACKEND_TYPE="${3}"
   local INFRA_HOME="${4:-$INFRA_DEFAULT_HOME}"
-  local INFRA_BASE
   echo "Cleaning up ${INFRA_TYPE} state for ${INFRA_SCOPE}..."
   case "${INFRA_TYPE}" in
     't'|'T'|'Terraform'|'terraform')
       . "${SCRIPT_DEFAULT_HOME}/tf.sh"
       IsAvailable f TFCleanup "TFCleanup function"
-      INFRA_BASE=$(TFHome "${INFRA_SCOPE}")
       local tfCleanup_status
       tfCleanup_status=$(TFCleanup "${INFRA_SCOPE}" "${INFRA_HOME}" 'r')
       local tfCleanup_ret_code=$?
@@ -365,11 +379,5 @@ function InfraCleanup {
       ;;
 
   esac
-  if [[ "${INFRA_KEY_BACKEND_TYPE}" != "" ]];
-  then
-    . "${SCRIPT_DEFAULT_HOME}/pgp.sh"
-    IsAvailable f PGPDeleteKeyFile "PGPDeleteKeyFile function"
-    PGPDeleteKeyFile "${INFRA_SCOPE}" 'PUB' "${INFRA_BASE}"
-  fi
   echo "Cleaned up ${INFRA_TYPE} state for ${INFRA_SCOPE}."
 }

@@ -67,6 +67,10 @@ function TFStatePack {
     echo "TFStatePack: No terraform state directory exists at ${TF_BASE}"
     ReturnOrExit "${3:-Exit}" "${4:-1}" "2"; return $?
   fi
+  echo "TFStatePack: Deleting terraform files from ${TF_BASE}."
+  rm "${TF_BASE}"/*tf
+  echo "TFStatePack: Deleting terraform providers."
+  rm -rf "${TF_BASE}/.terraform/providers"
   local TF_STATE_PACK_FILE_PATH;TF_STATE_PACK_FILE_PATH=$(TFStatePackFilePath "${1}" "${2}")
   local TF_STATE_PACK_FILE_PATH_PREFIX=${TF_STATE_PACK_FILE_PATH%"$TF_DEFAULT_STATE_PACK_FILE_EXTENSION"}
   if [[ -f "${TF_STATE_PACK_FILE_PATH_PREFIX}.tar" ]];
@@ -74,6 +78,7 @@ function TFStatePack {
     echo "TFStatePack: Deleting exiting tar file ${TF_STATE_PACK_FILE_PATH_PREFIX}.tar."
     rm "${TF_STATE_PACK_FILE_PATH_PREFIX}.tar"
   fi
+  echo "TFStatePack: creating tar from directory ${TF_BASE}."
   state_tar_status=$(tar -cvf "${TF_STATE_PACK_FILE_PATH_PREFIX}.tar" -C "${TF_BASE}" . 2>&1)
   state_tar_ret_code=$?
   if [[ $state_tar_ret_code -ne 0 ]];
@@ -82,11 +87,13 @@ function TFStatePack {
     echo "${state_tar_status}"
     ReturnOrExit "${3:-Exit}" "${4:-1}" "3"; return $?
   fi
+  echo "TFStatePack: created tar at ${TF_STATE_PACK_FILE_PATH_PREFIX}.tar"
   if [[ -f "${TF_STATE_PACK_FILE_PATH_PREFIX}.tar.gz" ]];
   then
     echo "TFStatePack: Deleting exiting tar.gz file ${TF_STATE_PACK_FILE_PATH_PREFIX}.tar.gz"
     rm "${TF_STATE_PACK_FILE_PATH_PREFIX}.tar.gz"
   fi
+  echo "TFStatePack: GZipping tar file ${TF_STATE_PACK_FILE_PATH_PREFIX}.tar"
   state_gzip_status=$(gzip "${TF_STATE_PACK_FILE_PATH_PREFIX}.tar" 2>&1)
   state_gzip_ret_code=$?
   if [[ $state_gzip_ret_code -ne 0 ]];
@@ -95,7 +102,8 @@ function TFStatePack {
     echo "${state_gzip_status}"
     ReturnOrExit "${3:-Exit}" "${4:-1}" "4"; return $?
   fi
-  echo "Deleting the terraform directory ${TF_BASE}"
+  echo "TFStatePack: GZipped tar file."
+  echo "TFStatePack: Deleting the terraform directory ${TF_BASE}"
   rm -rf "${TF_BASE}"
 }
 
@@ -138,7 +146,7 @@ function TFStateUnPack {
   fi
   if [[ ! -d "${TF_BASE}" ]];
   then
-    echo "TFStateUnPack: No terraform state directory could be created at ${TF_BASE}"
+    echo "TFStateUnPack: No terraform state directory was created after tar at ${TF_BASE}"
     ReturnOrExit "${3:-Exit}" "${4:-1}" "5"; return $?
   fi
   if [[ -f "${TF_STATE_PACK_FILE_PATH_PREFIX}.tar" ]];
@@ -158,8 +166,11 @@ function TFCleanup {
   local TF_HOME="${2:-$TF_DEFAULT_HOME}"
   local TF_BASE;
   TF_BASE=$(TFHome "${TF_SCOPE}" "${TF_HOME}")
-  rm "${TF_BASE}"/*tf
-  rm -rf "${TF_BASE}/.terraform/providers"
+  if [[ -d "${TF_BASE}" ]];
+  then
+    echo "TFCleanup: Deleting terraform state directory ${TF_BASE}."
+    rm -rf "${TF_BASE}"
+  fi
 }
 
 function TFInit {
@@ -175,10 +186,13 @@ function TFInit {
   local TF_PLUGINS="${TF_BASE}/.plugins"
   local TF_BACKEND_CFG="${TF_BASE}/backend.cfg"
   local TF_DOWNLOAD_PLUGIN="${TF_DOWNLOAD_PLUGIN:-false}"
+  local TF_STATE="${TF_BASE}/${TF_SCOPE}_terraform.tfstate"
 
+  echo "TFInit: Creating base directory ${TF_BASE}."
   mkdir -p "${TF_BASE}"
   mkdir -p "${TF_PLUGINS}"
   local copy_status
+  echo "TFInit: Copying 'tf' files to base directory."
   copy_status=$(cp -R ./*.tf "${TF_BASE}" 2>&1)
   local copy_ret_val=$?
   if [ $copy_ret_val -ne 0 ];
@@ -189,12 +203,14 @@ function TFInit {
   fi
   if [ ! -f "${TF_BACKEND_CFG}" ];
   then
+    echo "TFInit: Creating backend config ${TF_BACKEND_CFG}."
     echo 'path="'"${TF_STATE}"'"' > "${TF_BACKEND_CFG}"
   fi
   local init_status
   local init_ret_code
   if [ "${TF_DOWNLOAD_PLUGIN}" == "true" ];
   then
+    echo "TFInit: Terraform init...."
     init_status=$(terraform -chdir="${TF_BASE}" init -backend-config="${TF_BACKEND_CFG}" -input=false -no-color 2>&1)
     init_ret_code=$?
   else
@@ -203,12 +219,15 @@ function TFInit {
   fi
   if [ $init_ret_code -ne 0 ];
   then
-    echo "TFApply: Failed to initialize terraform with return error code ${init_ret_code}. TF_BASE=${TF_BASE}"
+    echo "TFInit: Failed to initialize terraform with return error code ${init_ret_code}. TF_BASE=${TF_BASE}"
     echo "${init_status}"
     ReturnOrExit "${3:-Exit}" "${4:-1}" "3"; return $?
+  else
+    echo "${init_status}"
   fi
   if [[ "${TF_DOWNLOAD_PLUGIN}" == "true" ]];
   then
+    echo "TFInit: Copying downloaded plugins to ${TF_PLUGINS}"
     cp -R "${TF_BASE}/.terraform/providers/." "${TF_PLUGINS}"
   fi
 }
@@ -217,7 +236,7 @@ function TFApply {
   if [[ "${1}" == "" ]];
   then
     echo 'TFApply <Scope> [<Operation: Update*|Replace|Destroy>] [<Target: name of specific resource>] [<TF_HOME:'" ${TF_DEFAULT_HOME}"'>] [<Return: Exit*|Return>] [Exit code]'
-    ReturnOrExit "${5:-Exit}" "${6:-1}" "1"; return $?
+    ReturnOrExit "${5:-Exit}" "${6:-1}" "2"; return $?
   fi
   local TF_SCOPE="${1}"
   local TF_OPS="${2:-Update}"
@@ -233,6 +252,7 @@ function TFApply {
   local TF_PLAN="${TF_PLAN_ROOT}/terraform_${TF_CURR_TIME}.plan"
   local TF_VARS="${TF_BASE}/terraform.tfvars"
 
+  echo "TFApply: Creating state and plan directories"
   mkdir -p "${TF_STATE_BACKUP_ROOT}"
   mkdir -p "${TF_PLAN_ROOT}"
   if [ ! -f "${TF_VARS}" ];
@@ -242,6 +262,7 @@ function TFApply {
     echo 'TF_BASE = "'"${TF_BASE}"'"' >> "${TF_VARS}"
   fi
   local validate_status
+  echo "TFApply: Validating terraform configuration..."
   validate_status=$(terraform -chdir="${TF_BASE}" validate -no-color 2>&1)
   local validate_ret_code=$?
   if [ $validate_ret_code -ne 0 ];
@@ -280,28 +301,35 @@ function TFApply {
 
   esac
   local plan_status
+  echo "TFApply: Generating plan using command ${plan_command}"
   plan_status=$($plan_command 2>&1)
   local plan_ret_code=$?
   if [ $plan_ret_code -eq 1 ];
   then
-    echo "TFApply: Failed to plan for terraform script with return error code ${plan_ret_code}. TF_BASE=${TF_BASE}"
     echo "${plan_status}"
+    echo "TFApply: Failed to plan for terraform script with return error code ${plan_ret_code}. TF_BASE=${TF_BASE}"
     ReturnOrExit "${5:-Exit}" "${6:-1}" "5"; return $?
+  else
+    echo "${plan_status}"
   fi
   if [ $plan_ret_code -eq 0 ];
   then
+    echo "TFApply: No new change to the configuration was detected. Deleting the plan and skipping apply..."
     rm "${TF_PLAN}"
+    return 1
   fi
   if [ $plan_ret_code -eq 2 ];
   then
     local apply_status
     apply_status=$(terraform -chdir="${TF_BASE}" apply -no-color -compact-warnings -input=false -auto-approve -backup="${TF_STATE_BACKUP}" -state="${TF_STATE}" "${TF_PLAN}"  2>&1)
-  local apply_ret_code=$?
+    local apply_ret_code=$?
     if [ $apply_ret_code -ne 0 ];
     then
       echo "TFApply: Failed to apply the terraform script with return error code ${apply_ret_code}"
       echo "${apply_status}"
       ReturnOrExit "${5:-Exit}" "${6:-1}" "6"; return $?
+    else
+      echo "${apply_status}"
     fi
   fi
 }
