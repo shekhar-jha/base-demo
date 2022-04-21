@@ -279,6 +279,45 @@ function PGPStoreKeys {
   return 0
 }
 
+function PGPDeleteKey {
+  if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ];
+  then
+    echo 'PGPDeleteKey <SCOPE> <Type: KEY|PUB> <Store type: AWS|GCP> [<Return: Exit*|Return>] [Exit code]'
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "1"; return $?
+  fi
+  local PGP_SCOPE="${1}"
+  local PGP_TYPE="${2}"
+  local PGP_STORE_TYPE="${3}"
+  local PGP_KEY_NAME
+  case $PGP_TYPE in
+    KEY)
+      PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "KEY")
+      ;;
+
+    PUB)
+      PGP_KEY_NAME=$(PGPKeyName "${PGP_SCOPE}" "PUB")
+      ;;
+
+    *)
+      echo 'PGPDeleteKey: Only type PUB & KEY are supported at this time'
+      ReturnOrExit "${4:-Exit}" "${5:-1}" "2"; return $?
+      ;;
+  esac
+  echo "PGPDeleteKey: Deleting key ${PGP_KEY_NAME}...."
+  . "${SCRIPT_DEFAULT_HOME}"/store.sh
+  IsAvailable f "DeleteStoreKey" "DeleteStoreKey function"
+  DeleteStoreKey "${PGP_SCOPE}" "${PGP_STORE_TYPE}" "${PGP_KEY_NAME}"
+  local delete_key_ret_code=$?
+  if [ $delete_key_ret_code -eq 0 ];
+  then
+    echo "PGPDeleteKey: Deleted key ${PGP_KEY_NAME} successfully."
+  else
+    echo "PGPDeleteKey: Deleting key ${PGP_KEY_NAME} failed with error ${delete_key_ret_code}"
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "3"; return $?
+  fi
+  return 0
+}
+
 function PGPGetKey {
   if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ];
   then

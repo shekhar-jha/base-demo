@@ -2,6 +2,7 @@
 
 . ../../scripts/cloud.sh
 . ../../scripts/infra.sh
+. ../../scripts/pgp.sh
 
 usage() { echo "Usage: $0 -e <environment name> -c <aws profile> -r <aws region> [-d]" 1>&2; exit 1;}
 while getopts ":e:c:r:d" options;
@@ -65,3 +66,5 @@ InfraLoadState "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_
 InfraInit "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 7
 InfraApply "${env_name}" "${INFRA_IAC_TYPE}" 'Destroy' '' '' 'e' 8
 InfraCleanup "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 12
+PGPDeleteKey "${env_name}" "KEY" "${INFRA_CLOUD_TYPE}"
+PGPDeleteKey "${env_name}" "PUB" "${INFRA_CLOUD_TYPE}"

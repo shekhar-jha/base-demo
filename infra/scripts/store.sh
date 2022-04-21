@@ -111,6 +111,39 @@ function GetStoredKey {
   esac
 }
 
+function DeleteStoreKey {
+  if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ];
+  then
+    echo "DeleteStoreKey <Scope> <Store type: AWS|GCP> <Key name>  [<Return: Exit*|Return>] [Exit code]"
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "1"; return $?
+  fi
+  local STORE_SCOPE="${1}"
+  local STORE_TYPE="${2}"
+  local STORE_KEY="${3}"
+
+  case "${STORE_TYPE}" in
+
+    AWS)
+      . "${SCRIPT_DEFAULT_HOME}"/aws.sh
+      IsAvailable f AWSDeleteResource "AWSDeleteResource function"
+      local awsDeleteKey_status
+      awsDeleteKey_status=$(AWSDeleteResource "${STORE_SCOPE}" 'SecretVault' "${STORE_KEY}")
+      local awsDeleteKey_ret_code=$?
+      if [ $awsDeleteKey_ret_code -ne 0 ];
+      then
+        echo "Failed to delete key ${STORE_KEY} from AWS due to error ${awsDeleteKey_ret_code}"
+        echo "${awsDeleteKey_status}"
+        ReturnOrExit "${4:-Exit}" "${5:-1}" "2"; return $?
+      fi
+      ;;
+
+    *)
+      echo "DeleteStoreKey: Only AWS Store type is currently supported."
+      ReturnOrExit "${4:-Exit}" "${5:-1}" "3"; return $?
+      ;;
+  esac
+}
+
 function StoreFile {
   if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ] || [ "${4}" == "" ];
   then

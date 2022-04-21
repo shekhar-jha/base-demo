@@ -19,6 +19,8 @@ Ensure that the following tools are installed and setup
 
 #### Environment setup
 
+The environment setup should be run from a machine with internet access to enable terraform to download plugins.
+
 1. Ensure that a valid AWS profile has been configured
 2. If a new environment needs to be setup, run the following commands after replacing `<Environment name>` with name of the environment (without spaces) and `<AWS profile>` with name of AWS profile to use to setup environment.
      ```
@@ -27,7 +29,13 @@ Ensure that the following tools are installed and setup
      chmod +x setup.sh
      ./setup.sh -e <Environment name> -c <AWS profile> -d
      ```
+     This will ensure that all the dependencies are created and initial state and keys will be saved for future reference.
 
 ### Core infrastructure
 
-The core infrastructure consists of terraform state storage (s3), GitHub action runner environment. The following steps were followed to create the core infra
+Any changes to the core-infrastructure can be applied by using `apply.sh` command.
+
+
+### Environment cleanup
+
+Environment can be destroyed and cleaned up using `destroy.sh -e <env name> -c <profile name>` script.
