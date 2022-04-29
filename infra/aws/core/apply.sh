@@ -3,6 +3,7 @@
 . ../../scripts/cloud.sh
 . ../../scripts/infra.sh
 
+export TF_VAR_INFRA_CIDR="10.0.0.0/16"
 usage() { echo "Usage: $0 -e <environment name> -c <aws profile> -r <aws region> [-d]" 1>&2; exit 1;}
 while getopts ":e:c:r:d" options;
 do

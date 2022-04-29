@@ -59,7 +59,7 @@ function InfraApply {
   local INFRA_TYPE="${2}"
   local INFRA_OPS="${3:-Update}"
   local INFRA_TARGET="${4}"
-  local INFRA_HOME="${4:-$INFRA_DEFAULT_HOME}"
+  local INFRA_HOME="${5:-$INFRA_DEFAULT_HOME}"
   echo "Applying change to ${INFRA_TYPE} state for ${INFRA_SCOPE}..."
   case "${INFRA_TYPE}" in
 

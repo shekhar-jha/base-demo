@@ -5,6 +5,9 @@ resource "random_string" "ENV_SUFFIX" {
   number  = true
   special = false
 }
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 locals {
   env_name_lower = lower(var.ENV_NAME)
 }

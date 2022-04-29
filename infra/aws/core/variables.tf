@@ -33,3 +33,6 @@ variable "TF_ENV" {
     http_proxy = ""
   }
 }
+variable "INFRA_CIDR" {
+  type = string
+}

@@ -69,6 +69,7 @@ function TFStatePack {
   fi
   echo "TFStatePack: Deleting terraform files from ${TF_BASE}."
   rm "${TF_BASE}"/*tf
+  rm "${TF_BASE}"/*tpl
   echo "TFStatePack: Deleting terraform providers."
   rm -rf "${TF_BASE}/.terraform/providers"
   local TF_STATE_PACK_FILE_PATH;TF_STATE_PACK_FILE_PATH=$(TFStatePackFilePath "${1}" "${2}")
@@ -193,7 +194,7 @@ function TFInit {
   mkdir -p "${TF_PLUGINS}"
   local copy_status
   echo "TFInit: Copying 'tf' files to base directory."
-  copy_status=$(cp -R ./*.tf "${TF_BASE}" 2>&1)
+  copy_status=$(cp -R ./*.tf ./*.tpl "${TF_BASE}" 2>&1)
   local copy_ret_val=$?
   if [ $copy_ret_val -ne 0 ];
   then

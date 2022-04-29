@@ -4,8 +4,9 @@
 . ../../scripts/infra.sh
 . ../../scripts/pgp.sh
 
-usage() { echo "Usage: $0 -e <environment name> -c <aws profile> -r <aws region> [-d]" 1>&2; exit 1;}
-while getopts ":e:c:r:d" options;
+export TF_VAR_INFRA_CIDR="10.0.0.0/16"
+usage() { echo "Usage: $0 -e <environment name> -c <aws profile> -r <aws region> [-i <item to destroy>]]" 1>&2; exit 1;}
+while getopts ":e:c:r:i:" options;
 do
   case "${options}" in
     e)
@@ -30,8 +31,12 @@ do
       fi
       ;;
 
-    d)
-      TF_DOWNLOAD_PLUGIN=true
+    i)
+      DESTROY_ITEM="${OPTARG}"
+      if [[ "${DESTROY_ITEM}" == "" ]];
+      then
+        usage
+      fi
       ;;
     :)
       echo "Error: -${OPTARG} requires an argument."
@@ -64,7 +69,14 @@ CloudInit "${ENV_NAME}" "${INFRA_CLOUD_TYPE}" profile "${CLOUD_PROFILE}" "e" 2
 export INFRA_STORE_BUCKET=$(CloudGetResource "${env_name}" "${INFRA_CLOUD_TYPE}" "FileStore" "${env_name}-tf-state" )
 InfraLoadState "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_STORE_BUCKET}" '' 'e' 11
 InfraInit "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 7
-InfraApply "${env_name}" "${INFRA_IAC_TYPE}" 'Destroy' '' '' 'e' 8
+InfraApply "${env_name}" "${INFRA_IAC_TYPE}" 'Destroy' "${DESTROY_ITEM}" '' 'e' 8
+if [[ "${DESTROY_ITEM}" != "" ]];
+then
+  InfraSaveState "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_STORE_BUCKET}" '' 'e' 11
+fi
 InfraCleanup "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 12
-PGPDeleteKey "${env_name}" "KEY" "${INFRA_CLOUD_TYPE}"
-PGPDeleteKey "${env_name}" "PUB" "${INFRA_CLOUD_TYPE}"
+if [[ "${DESTROY_ITEM}" == "" ]];
+then
+  PGPDeleteKey "${env_name}" "KEY" "${INFRA_CLOUD_TYPE}"
+  PGPDeleteKey "${env_name}" "PUB" "${INFRA_CLOUD_TYPE}"
+fi
