@@ -343,7 +343,7 @@ function AWSDeleteResource {
   case "${AWS_RES_TYPE}" in
 
     SecretVault|secretvault|vault)
-      AWS_RES_CMD="secretsmanager delete-secret --secret-id ${AWS_RES_NAME}"
+      AWS_RES_CMD="secretsmanager delete-secret --secret-id ${AWS_RES_NAME} --recovery-window-in-days 7"
       ;;
 
     *)
