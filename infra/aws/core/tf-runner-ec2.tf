@@ -26,12 +26,21 @@ resource "aws_launch_template" "git_runner" {
   instance_type          = "t3.micro"
   # No SSH Key is associated with instance.
 # key_name
-  vpc_security_group_ids = [aws_security_group.git_runner.id]
+#  vpc_security_group_ids = [aws_security_group.git_runner.id]
   iam_instance_profile {
     name                 = aws_iam_instance_profile.git_runner.name
   }
+  network_interfaces {
+    device_index = 0
+    associate_public_ip_address = "true"
+    security_groups = [aws_security_group.git_runner.id]
+    delete_on_termination = "true"
+    description = "git_runner_vm_nic"
+    subnet_id = aws_subnet.public.id
+  }
   metadata_options {
     http_endpoint        = "enabled"
+    http_put_response_hop_limit = 1
     http_tokens          = "required"
   }
   monitoring {
@@ -56,7 +65,7 @@ resource "aws_autoscaling_group" "git_runner" {
   min_size            = 1
   health_check_type   = "EC2"
   desired_capacity    = 1
-  vpc_zone_identifier = [aws_subnet.private.id]
+#  vpc_zone_identifier = [aws_subnet.public.id]
 
   lifecycle {
     create_before_destroy = true
@@ -92,16 +101,6 @@ resource "aws_security_group_rule" "git_runner_egress" {
   security_group_id = aws_security_group.git_runner.id
 }
 
-# Needed for SSM connectivity
-resource "aws_security_group_rule" "git_runner_ingress" {
-  description = "allow all ingress traffic"
-  type        = "ingress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = -1
-  cidr_blocks = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.git_runner.id
-}
 
 ##########################################
 # IAM Policies
