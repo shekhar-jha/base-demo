@@ -83,7 +83,7 @@ fi
 export INFRA_STORE_BUCKET=$(CloudGetResource "${env_name}" "${INFRA_CLOUD_TYPE}" "FileStore" "${env_name}-tf-state" )
 InfraLoadState "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_STORE_BUCKET}" '' 'r' 11
 InfraInit "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 7
-InfraApply "${env_name}" "${INFRA_IAC_TYPE}" 'Update' '' '' 'e' 8
+InfraApply "${env_name}" "${INFRA_IAC_TYPE}" 'Update' '' '' 'r' 8
 APPLY_RET_CODE=$?
 decryptedKey=$(InfraGetConfig "${env_name}" "aws_iam_user_access_key_secret_encrypt" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 9)
 bucketId=$(InfraGetConfig "${env_name}" "aws_s3_tf_state_id" "${INFRA_IAC_TYPE}" ''  '' 'e' 10)
