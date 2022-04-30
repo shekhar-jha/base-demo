@@ -211,101 +211,102 @@ resource "aws_route_table_association" "public" {
 # VPC Endpoints for AWS operations
 ##############################################
 
-resource "aws_vpc_endpoint" "git_runner_ssm" {
-  service_name = "com.amazonaws.${data.aws_region.current.name}.ssm"
-  vpc_id = aws_vpc.git_runner.id
-  vpc_endpoint_type = "Interface"
-  subnet_ids = [aws_subnet.private.id]
-  private_dns_enabled = true
-  security_group_ids = [aws_security_group.git_runner.id]
-  tags   = {
-    Name = "${local.env_name_lower}_git_runner_ssm"
-    Environment = local.env_name_lower
-  }
+#resource "aws_vpc_endpoint" "git_runner_ssm" {
+#  service_name = "com.amazonaws.${data.aws_region.current.name}.ssm"
+#  vpc_id = aws_vpc.git_runner.id
+#  vpc_endpoint_type = "Interface"
+#  subnet_ids = [aws_subnet.private.id]
+#  private_dns_enabled = true
+#  security_group_ids = [aws_security_group.git_runner.id]
+#  tags   = {
+#    Name = "${local.env_name_lower}_git_runner_ssm"
+#    Environment = local.env_name_lower
+#  }
 # TODO: Add restricted policy to reduce impact
-}
+#}
 
-resource "aws_vpc_endpoint" "git_runner_ssmmessages" {
-  service_name = "com.amazonaws.${data.aws_region.current.name}.ssmmessages"
-  vpc_id = aws_vpc.git_runner.id
-  vpc_endpoint_type = "Interface"
-  subnet_ids = [aws_subnet.private.id]
-  private_dns_enabled = true
-  security_group_ids = [aws_security_group.git_runner.id]
-  tags   = {
-    Name = "${local.env_name_lower}_git_runner_ssm_messages"
-    Environment = local.env_name_lower
-  }
+# resource "aws_vpc_endpoint" "git_runner_ssmmessages" {
+#  service_name = "com.amazonaws.${data.aws_region.current.name}.ssmmessages"
+#  vpc_id = aws_vpc.git_runner.id
+#  vpc_endpoint_type = "Interface"
+#  subnet_ids = [aws_subnet.private.id]
+#  private_dns_enabled = true
+#  security_group_ids = [aws_security_group.git_runner.id]
+#  tags   = {
+#    Name = "${local.env_name_lower}_git_runner_ssm_messages"
+#    Environment = local.env_name_lower
+#  }
+#  # TODO: Add restricted policy to reduce impact
+#}
+
+# resource "aws_vpc_endpoint" "git_runner_ec2" {
+#  service_name = "com.amazonaws.${data.aws_region.current.name}.ec2"
+#  vpc_id = aws_vpc.git_runner.id
+#  vpc_endpoint_type = "Interface"
+#  subnet_ids = [aws_subnet.private.id]
+#  private_dns_enabled = true
+#  security_group_ids = [aws_security_group.git_runner_endpoint.id]
+#  tags   = {
+#    Name = "${local.env_name_lower}_git_runner_ec2"
+#    Environment = local.env_name_lower
+#  }
   # TODO: Add restricted policy to reduce impact
-}
+#}
 
-resource "aws_vpc_endpoint" "git_runner_ec2" {
-  service_name = "com.amazonaws.${data.aws_region.current.name}.ec2"
-  vpc_id = aws_vpc.git_runner.id
-  vpc_endpoint_type = "Interface"
-  subnet_ids = [aws_subnet.private.id]
-  private_dns_enabled = true
-  security_group_ids = [aws_security_group.git_runner_endpoint.id]
-  tags   = {
-    Name = "${local.env_name_lower}_git_runner_ec2"
-    Environment = local.env_name_lower
-  }
-  # TODO: Add restricted policy to reduce impact
-}
-
-resource "aws_vpc_endpoint" "git_runner_s3" {
-  service_name = "com.amazonaws.${data.aws_region.current.name}.s3"
-  vpc_id = aws_vpc.git_runner.id
-  route_table_ids = [aws_route_table.private.id]
+# resource "aws_vpc_endpoint" "git_runner_s3" {
+#  service_name = "com.amazonaws.${data.aws_region.current.name}.s3"
+#  vpc_id = aws_vpc.git_runner.id
+#  route_table_ids = [aws_route_table.private.id]
 # Policy to restrict access to Yum repos for AWS Linux 2
-  policy = jsonencode({
-    "Statement": [
-      {
-        "Principal": "*",
-        "Action": [
-          "s3:GetObject"
-        ],
-        "Effect": "Allow",
-        "Resource": [
-          "arn:aws:s3:::amazonlinux.${data.aws_region.current.name}.amazonaws.com/*",
-          "arn:aws:s3:::amazonlinux-2-repos-${data.aws_region.current.name}/*"
-        ]
-      },
-    ]
-  })
-  tags   = {
-    Name = "${local.env_name_lower}_git_runner_s3"
-    Environment = local.env_name_lower
-  }
-}
+#  policy = jsonencode({
+#    "Statement": [
+#      {
+#        "Principal": "*",
+#        "Action": [
+#          "s3:GetObject"
+#        ],
+#        "Effect": "Allow",
+#        "Resource": [
+#          "arn:aws:s3:::amazonlinux.${data.aws_region.current.name}.amazonaws.com/*",
+#          "arn:aws:s3:::amazonlinux-2-repos-${data.aws_region.current.name}/*"
+#        ]
+#      },
+#    ]
+#  })
+#  tags   = {
+#    Name = "${local.env_name_lower}_git_runner_s3"
+#    Environment = local.env_name_lower
+#  }
+# }
 
 
 ##############################################
 # Security group for VPC Endpoint services
+# Cost money
 ##############################################
 
-resource "aws_security_group" "git_runner_endpoint" {
-  name_prefix = "git_runner_endpoint"
-  description = "allow inbound traffic from the network"
-  vpc_id      = aws_vpc.git_runner.id
-
-  tags = {
-    Name               = "${var.ENV_NAME} git_runner endpoint security group"
-    Environment        = var.ENV_NAME
-  }
-}
+# resource "aws_security_group" "git_runner_endpoint" {
+#  name_prefix = "git_runner_endpoint"
+#  description = "allow inbound traffic from the network"
+#  vpc_id      = aws_vpc.git_runner.id
+#
+#  tags = {
+#    Name               = "${var.ENV_NAME} git_runner endpoint security group"
+#    Environment        = var.ENV_NAME
+#  }
+#}
 
 # Only ingress traffic is supported.
-resource "aws_security_group_rule" "git_runner_endpoint_ingress" {
-  description = "allow all ingress traffic"
-  type        = "ingress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = -1
-  # TODO: Reduce cidr_blocks to subnet cidr to reduce chance of reuse
-  cidr_blocks = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.git_runner_endpoint.id
-}
+# resource "aws_security_group_rule" "git_runner_endpoint_ingress" {
+#  description = "allow all ingress traffic"
+#  type        = "ingress"
+#  from_port   = 0
+#  to_port     = 0
+#  protocol    = -1
+#  # TODO: Reduce cidr_blocks to subnet cidr to reduce chance of reuse
+#  cidr_blocks = ["0.0.0.0/0"]
+#  security_group_id = aws_security_group.git_runner_endpoint.id
+# }
 
 
 ##############################################
