@@ -328,7 +328,7 @@ function TFApply {
     then
       echo "TFApply: Failed to apply the terraform script with return error code ${apply_ret_code}"
       echo "${apply_status}"
-      ReturnOrExit "${5:-Exit}" "${6:-1}" "6"; return $?
+      ReturnOrExit "${5:-Return}" "${6:-1}" "6"; return $?
     else
       echo "${apply_status}"
     fi
