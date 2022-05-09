@@ -56,6 +56,9 @@ resource "aws_launch_template" "git_runner" {
   user_data              = base64encode(templatefile("${path.module}/setup-vm.sh.tpl", {
     region               = data.aws_region.current.name
     linux_type           = "linux_amd64"
+    GITHUB_RUNNER_VERSION= "2.290.1"
+    env                  = var.ENV_NAME
+    code_repo            = aws_codecommit_repository.git_runner.repository_name
   }))
 }
 
@@ -74,6 +77,8 @@ resource "aws_autoscaling_group" "git_runner" {
     id      = aws_launch_template.git_runner.id
     version = "$Latest" # support other versions?
   }
+  # VM user-data script depends on repo.
+  depends_on = [aws_codecommit_repository.git_runner, aws_ecr_repository.git_runner]
 }
 
 ##########################################
@@ -185,6 +190,23 @@ resource "aws_iam_role_policy" "git_runner" {
         ]
         Effect   = "Allow"
         Resource = "*"
+      },
+      # Access to Github runner token
+      {
+        "Effect": "Allow",
+        "Action": "secretsmanager:GetSecretValue",
+        "Resource": "arn:aws:secretsmanager:${data.aws_region.current.name}:*:secret:${var.ENV_NAME}-git-runner-*"
+      },
+      # Access to Code commit
+      {
+        "Action": [
+          "codecommit:GitPull",
+          "codecommit:Get*",
+          "codecommit:BatchGetRepositories",
+          "codecommit:List*"
+        ],
+        "Resource": ["arn:aws:codecommit:${data.aws_region.current.name}:*:${aws_codecommit_repository.git_runner.repository_name}"],
+        "Effect": "Allow"
       },
     ]
   })
