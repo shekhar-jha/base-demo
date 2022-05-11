@@ -62,6 +62,6 @@ remove() {
 trap 'remove; exit 130' INT
 trap 'remove; exit 143' TERM
 
-./run.sh "$*" &
+nohup ./run.sh "$*" &
 
 wait $!

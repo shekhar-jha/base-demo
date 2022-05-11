@@ -24,6 +24,7 @@ echo "export region=${region}" > ./.env
  echo "export code_repo=${code_repo}"
  echo "export env=${env}"
  echo "export GITHUB_RUNNER_VERSION=${GITHUB_RUNNER_VERSION}"
+ echo "export AWS_ECR_URL=${ecr_url}"
 } >> ./.env
 source ./.env
 

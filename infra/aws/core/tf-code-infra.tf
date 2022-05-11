@@ -31,9 +31,29 @@ resource "aws_codecommit_repository" "git_runner" {
     COMMIT
   }
 }
+resource "aws_iam_role_policy" "git_runner_code_commit" {
+  name_prefix = "git_runner_code_commit_access"
+  role        = aws_iam_role.git_runner.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      # Access to Code commit
+      {
+        "Action": [
+          "codecommit:GitPull",
+          "codecommit:Get*",
+          "codecommit:BatchGetRepositories",
+          "codecommit:List*"
+        ],
+        "Resource": ["arn:aws:codecommit:${data.aws_region.current.name}:*:${aws_codecommit_repository.git_runner.repository_name}"],
+        "Effect": "Allow"
+      },
+    ]
+  })
+}
 
 resource "aws_ecr_repository" "git_runner" {
-  name = "git_runner"
+  name = "${var.ENV_NAME}-git-runner"
   image_tag_mutability = "IMMUTABLE"
   image_scanning_configuration {
     scan_on_push = true
@@ -46,5 +66,27 @@ resource "aws_ecr_repository" "git_runner" {
     Name               = "${var.ENV_NAME} git_runner"
     Environment        = var.ENV_NAME
   }
+}
+
+resource "aws_iam_role_policy" "git_runner_ecr" {
+  name_prefix = "git_runner_code_ecr"
+  role        = aws_iam_role.git_runner.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      # Access to Elastic Container Registry
+      {
+        "Effect": "Allow",
+        "Action": "ecr:*",
+        "Resource": "arn:aws:ecr:${data.aws_region.current.name}:*:repository/${aws_ecr_repository.git_runner.name}"
+      },
+      # Access to Elastic Container Registry Authorization Token
+      {
+        "Effect": "Allow",
+        "Action": "ecr:GetAuthorizationToken",
+        "Resource": "*"
+      },
+    ]
+  })
 }
 

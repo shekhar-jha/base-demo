@@ -59,6 +59,7 @@ resource "aws_launch_template" "git_runner" {
     GITHUB_RUNNER_VERSION= "2.290.1"
     env                  = var.ENV_NAME
     code_repo            = aws_codecommit_repository.git_runner.repository_name
+    ecr_url              = aws_ecr_repository.git_runner.repository_url
   }))
 }
 
@@ -196,17 +197,6 @@ resource "aws_iam_role_policy" "git_runner" {
         "Effect": "Allow",
         "Action": "secretsmanager:GetSecretValue",
         "Resource": "arn:aws:secretsmanager:${data.aws_region.current.name}:*:secret:${var.ENV_NAME}-git-runner-*"
-      },
-      # Access to Code commit
-      {
-        "Action": [
-          "codecommit:GitPull",
-          "codecommit:Get*",
-          "codecommit:BatchGetRepositories",
-          "codecommit:List*"
-        ],
-        "Resource": ["arn:aws:codecommit:${data.aws_region.current.name}:*:${aws_codecommit_repository.git_runner.repository_name}"],
-        "Effect": "Allow"
       },
     ]
   })
