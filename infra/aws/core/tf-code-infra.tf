@@ -2,7 +2,7 @@ locals {
   github_runner_container_files = fileset("${path.module}/..", "github_runner/**")
 }
 resource "aws_codecommit_repository" "git_runner" {
-  repository_name = "git_runner"
+  repository_name = "${var.ENV_NAME}_git_runner"
   description     = "Repository for git_runner infrastructure"
   default_branch  = "main"
   tags = {
