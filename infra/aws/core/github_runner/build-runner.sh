@@ -20,7 +20,7 @@ docker build --tag git-runner \
   github_runner/
 
 aws ecr get-login-password --region "${region}" |docker login --username AWS --password-stdin "${AWS_ECR_URL}"
-docker tag "${AWS_ECR_URL}:git-runner"
+docker tag git-runner "${AWS_ECR_URL}:git-runner"
 docker push "${AWS_ECR_URL}:git-runner"
 
 docker run \
