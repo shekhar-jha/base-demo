@@ -13,21 +13,12 @@ resource "aws_codecommit_repository" "git_runner" {
   # TODO: Identify how to handle uploading text files.
   provisioner "local-exec" {
     command       = <<-COMMIT
-    COMMIT_ID=$(aws codecommit put-file  --region ${var.AWS_ENV.region} --profile '${var.AWS_ENV_AUTH}' \
-      --repository-name ${aws_codecommit_repository.git_runner.repository_name} --branch-name main \
-      --commit-message 'Change updates' --file-path "github_runner/Dockerfile"  \
-      --file-content "fileb://${path.module}/../github_runner/Dockerfile" \
-      --output text --query "commitId")
-    COMMIT_ID=$(aws codecommit put-file  --region ${var.AWS_ENV.region} --profile '${var.AWS_ENV_AUTH}' \
-      --repository-name ${aws_codecommit_repository.git_runner.repository_name} --branch-name main \
-      --commit-message 'Change updates' --file-path "github_runner/build-runner.sh"  \
-      --file-content "fileb://${path.module}/../github_runner/build-runner.sh" \
-      --output text --parent-commit-id $${COMMIT_ID} --query "commitId")
-    COMMIT_ID=$(aws codecommit put-file  --region ${var.AWS_ENV.region} --profile '${var.AWS_ENV_AUTH}' \
-      --repository-name ${aws_codecommit_repository.git_runner.repository_name} --branch-name main \
-      --commit-message 'Change updates' --file-path "github_runner/entrypoint.sh"  \
-      --file-content "fileb://${path.module}/../github_runner/entrypoint.sh" \
-      --output text --parent-commit-id $${COMMIT_ID} --query "commitId")
+    source ${path.module}/../../../scripts/aws.sh
+    source ${path.module}/../../../scripts/coderepo.sh
+    CloudInit "${var.ENV_NAME}" "AWS" profile "${var.AWS_ENV_AUTH}" "e" 2
+    CodeRepoInit "${var.ENV_NAME}" "AWS" ${aws_codecommit_repository.git_runner.repository_name}
+    CodeRepoUpdate "${var.ENV_NAME}" "AWS" ${aws_codecommit_repository.git_runner.repository_name} "${path.module}/../github_runner"
+    CodeRepoCommit "${var.ENV_NAME}" "AWS" ${aws_codecommit_repository.git_runner.repository_name}
     COMMIT
   }
 }
