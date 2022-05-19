@@ -34,6 +34,7 @@ else
     export RUNNER_TOKEN=$(echo $payload | jq .token --raw-output)
 
 fi
+unset GITHUB_PAT
 
 if [ -z "${RUNNER_NAME}" ]; then
     RUNNER_NAME=$(hostname)
