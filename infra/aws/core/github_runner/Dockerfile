@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 ENV ENV_NAME=""
 ENV GITHUB_PAT=""
