@@ -57,6 +57,8 @@ done
 
 log "Building the Github runner image"
 docker build --tag git-runner \
+  --build-arg GITHUB_OWNER=${GITHUB_OWNER} \
+  --build-arg GITHUB_REPOSITORY=${GITHUB_REPO} \
   github_runner/
 log "Built image with result $?"
 
@@ -78,6 +80,8 @@ docker run -d \
   -e RUNNER_NAME=${env}-git-runner \
   -e ENV_NAME=${env} \
   -e GITHUB_PAT=${GITHUB_PAT} \
+  -e GITHUB_OWNER=${GITHUB_OWNER} \
+  -e GITHUB_REPOSITORY=${GITHUB_REPO} \
   git-runner
 log "Started the Github runner image with result $?"
 

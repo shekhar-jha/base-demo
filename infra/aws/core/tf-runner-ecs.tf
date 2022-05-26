@@ -165,6 +165,14 @@ resource "aws_ecs_task_definition" "git_runner" {
         {
           name : "RUNNER_NAME"
           value : "${var.ENV_NAME}-fg-git_runner"
+        },
+        {
+          name : "GITHUB_OWNER"
+          value : "${var.GITHUB_REPO.repo_owner}"
+        },
+        {
+          name : "GITHUB_REPOSITORY"
+          value : "${var.GITHUB_REPO.repo_name}"
         }
       ]
       secrets : [
@@ -206,6 +214,14 @@ resource "aws_ecs_task_definition" "git_runner_ext" {
         {
           name : "RUNNER_NAME"
           value : "${var.ENV_NAME}-ext-git_runner"
+        },
+        {
+          name : "GITHUB_OWNER"
+          value : "${var.GITHUB_REPO.repo_owner}"
+        },
+        {
+          name : "GITHUB_REPOSITORY"
+          value : "${var.GITHUB_REPO.repo_name}"
         }
       ]
       secrets : [

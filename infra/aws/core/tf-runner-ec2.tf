@@ -63,6 +63,8 @@ resource "aws_launch_template" "git_runner" {
     ecr_name              = aws_ecr_repository.git_runner.name
     culster_name          = aws_ecs_cluster.git_runner.name
     iam_role              = aws_iam_role.git_runner_ecs.name
+    GITHUB_OWNER          = var.GITHUB_REPO.repo_owner
+    GITHUB_REPO           = var.GITHUB_REPO.repo_name
   }))
 }
 

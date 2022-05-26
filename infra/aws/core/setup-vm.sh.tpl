@@ -12,6 +12,8 @@ echo "export region=${region}" > ./.env
  echo "export AWS_ECR_NAME=${ecr_name}"
  echo "export CLUSTER=${culster_name}"
  echo "export IAM_ROLE=${iam_role}"
+ echo "export GITHUB_OWNER=${GITHUB_OWNER}"
+ echo "export GITHUB_REPO=${GITHUB_REPO}"
 } >> ./.env
 source ./.env
 
