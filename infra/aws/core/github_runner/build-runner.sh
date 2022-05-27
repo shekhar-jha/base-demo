@@ -72,19 +72,6 @@ log "Pushing the Github runner image.."
 docker push "${AWS_ECR_URL}:git-runner"
 log "Pushed new image with result $?"
 
-log "Retrieving the github PAT"
-GITHUB_PAT=$(aws secretsmanager get-secret-value --region ${region} --secret-id "${env}-git-runner" --query "SecretString" --output=text)
-
-log "Starting the Github runner image on VM..."
-docker run -d \
-  -e RUNNER_NAME=${env}-git-runner \
-  -e ENV_NAME=${env} \
-  -e GITHUB_PAT=${GITHUB_PAT} \
-  -e GITHUB_OWNER=${GITHUB_OWNER} \
-  -e GITHUB_REPOSITORY=${GITHUB_REPO} \
-  git-runner
-log "Started the Github runner image with result $?"
-
 # Need to add --no-block since there is a dependency on cloud-init script
 # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-agent-install.html
 log "Registering the EC2 instance with ECS"

@@ -39,6 +39,8 @@ if [ -z "${RUNNER_NAME}" ]; then
     RUNNER_NAME=$(hostname)
 fi
 
+unset GITHUB_PAT
+
 ./config.sh \
     --name "${RUNNER_NAME}" \
     --token "${RUNNER_TOKEN}" \
@@ -46,21 +48,9 @@ fi
     --work "${RUNNER_WORKDIR}" \
     --labels "${RUNNER_LABELS}" \
     --unattended \
-    --replace
+    --replace --ephemeral
 
-remove() {
-    if [ -n "${GITHUB_TOKEN}" ]; then
-        export REMOVE_TOKEN=$GITHUB_TOKEN
-    else
-        payload=$(curl -sX POST -H "Authorization: token ${GITHUB_PAT}" ${token_url%/registration-token}/remove-token)
-        export REMOVE_TOKEN=$(echo $payload | jq .token --raw-output)
-    fi
-
-    ./config.sh remove --unattended --token "${REMOVE_TOKEN}"
-}
-
-trap 'remove; exit 130' INT
-trap 'remove; exit 143' TERM
+unset RUNNER_TOKEN
 
 nohup ./run.sh "$*" &
 

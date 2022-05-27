@@ -1,7 +1,14 @@
+##########################################
+# SSL Certificate thumbprint for Github API
+# for OpenID Connect Identity Provider
+##########################################
 data "external" "github-thumbprint" {
   program = ["bash", "./get-thumbprint.sh.tpl"]
 }
 
+##########################################
+# AWS OpenID Connect provider for Github
+##########################################
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
@@ -12,6 +19,10 @@ resource "aws_iam_openid_connect_provider" "github" {
   }
 }
 
+##########################################
+# AWS IAM Role that can be assumed by
+# Github actions from specific repo
+##########################################
 data "aws_iam_policy_document" "github_actions_assume_role" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -43,25 +54,13 @@ resource "aws_iam_role" "github_actions" {
   }
 }
 
+##########################################
+# Github actions from specific repo can
+# perform the following operations
+# 1. Run and stop tasks
+# 2. Pass role to Task execution role.
+##########################################
 data "aws_iam_policy_document" "github_actions" {
-  statement {
-    actions   = ["ecs:DescribeServices", "ecs:ListServices"]
-    resources = ["*"]
-    condition {
-      test     = "StringEquals"
-      variable = "ecs:cluster"
-      values   = [aws_ecs_cluster.git_runner.arn]
-    }
-  }
-  statement {
-    actions   = ["ecs:UpdateService"]
-    resources = [aws_ecs_service.git_runner.id, aws_ecs_service.git_runner_external.id]
-    condition {
-      test     = "StringEquals"
-      variable = "ecs:cluster"
-      values   = [aws_ecs_cluster.git_runner.arn]
-    }
-  }
   statement {
     actions   = ["ecs:RunTask"]
     resources = ["*"]

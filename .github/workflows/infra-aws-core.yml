@@ -11,12 +11,10 @@ jobs:
   activate-github-runner:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.Env }}
-
     permissions:
       id-token: write
       contents: read
     outputs:
-      gitrunner_task_id: ${{ steps.create-task.outputs.task_id }}
       gitrunner_vm_id: ${{ steps.runner-label.outputs.vm_id }}
     steps:
       - name: Configure AWS credentials
@@ -37,36 +35,15 @@ jobs:
       - name: Start ECS Task for Github self-hosted runner
         id: create-task
         run: >
-          github_runner_task_arn=$(aws ecs run-task 
+          aws ecs run-task 
           --cluster "${{ github.event.inputs.Env }}_git_runner" --launch-type "EC2" 
           --task-definition "${{ github.event.inputs.Env }}_git_runner_ext" --overrides '{"containerOverrides": 
           [{"name": "${{ github.event.inputs.Env }}_git_runner_ext",
           "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
           {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.outputs.vm_id }}"}]}]}'
-          --query "tasks[0].taskArn" --output text)
-          
-          github_runner_task_id=$(echo "$github_runner_task_arn" | cut -d "/" -f 3)
-          
-          echo "::set-output name=task_id::$github_runner_task_id"
-          
-          echo "Task ARN generated $github_runner_task_id"
-
-          echo "Task ID generated $github_runner_task_id"
-
-  validate-input:
-    needs: activate-github-runner
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Validate values
-        run: |
-          echo "VM ID: ${{ needs.activate-github-runner.outputs.gitrunner_vm_id }}"
-          echo "Task ID: ${{ needs.activate-github-runner.outputs.gitrunner_task_id }}"
 
   build-code:
-    needs: [validate-input, activate-github-runner]
+    needs: [activate-github-runner]
     runs-on: [self-hosted, "${{ needs.activate-github-runner.outputs.gitrunner_vm_id }}"]
     permissions:
       id-token: write
