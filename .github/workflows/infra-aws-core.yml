@@ -1,7 +1,6 @@
 name: infra-aws-core
 on:
   workflow_dispatch:
-    branches: infra-core
     inputs:
       Env:
         description: 'Environment'
