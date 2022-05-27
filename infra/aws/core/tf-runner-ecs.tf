@@ -127,6 +127,9 @@ resource "aws_ecs_service" "git_runner" {
     ]
   }
   desired_count = 0
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
 }
 
 resource "aws_ecs_service" "git_runner_external" {
@@ -135,6 +138,9 @@ resource "aws_ecs_service" "git_runner_external" {
   cluster         = aws_ecs_cluster.git_runner.arn
   task_definition = aws_ecs_task_definition.git_runner_ext.arn
   desired_count   = 1
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
 }
 
 

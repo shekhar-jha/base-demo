@@ -1,0 +1,21 @@
+name: infra-aws-core
+on: workflow_dispatch
+jobs:
+  activate-github-runner:
+    runs-on: ubuntu-latest
+    environment: ne6
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Check identity
+        id: validate
+        run: |
+          aws sts get-caller-identity 
