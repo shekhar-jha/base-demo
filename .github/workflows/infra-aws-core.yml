@@ -27,7 +27,7 @@ jobs:
         run: |
           aws sts get-caller-identity
       - name: Start ECS Task for Github self-hosted runner
-        run: >
+        run: |
           aws ecs --profile core-infra run-task --cluster "${{ }}_git_runner" 
           --launch-type "EC2" --task-definition ne6_git_runner_ext 
           --overrides '{"containerOverrides": [{"name": "ne6_git_runner_ext", 
