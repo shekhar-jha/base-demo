@@ -14,12 +14,11 @@ on:
           - EC2
           - FARGATE
           - FARGATE_SPOT
-
+permissions: write-all
 jobs:
   activate-github-runner:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.Env }}
-    permissions: {write-all}
     outputs:
       gitrunner_vm_id: ${{ steps.runner-label.outputs.vm_id }}
     steps:
