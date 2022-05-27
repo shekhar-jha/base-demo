@@ -62,6 +62,28 @@ data "aws_iam_policy_document" "github_actions" {
       values   = [aws_ecs_cluster.git_runner.arn]
     }
   }
+  statement {
+    actions   = ["ecs:RunTask"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "ecs:cluster"
+      values   = [aws_ecs_cluster.git_runner.arn]
+    }
+  }
+  statement {
+    actions   = ["ecs:StopTask"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "ecs:cluster"
+      values   = [aws_ecs_cluster.git_runner.arn]
+    }
+  }
+  statement {
+    actions   = ["iam:PassRole"]
+    resources = [aws_iam_role.git_runner_ecs.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions" {
