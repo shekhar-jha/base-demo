@@ -29,7 +29,7 @@ jobs:
       - name: Start ECS Task for Github self-hosted runner
         id: create-task
         run: >
-          aws ecs --profile core-infra run-task 
+          aws ecs run-task 
           --cluster "${{ github.event.inputs.Env }}_git_runner" --launch-type "EC2" 
           --task-definition ne6_git_runner_ext --overrides '{"containerOverrides": 
           [{"name": "ne6_git_runner_ext",
