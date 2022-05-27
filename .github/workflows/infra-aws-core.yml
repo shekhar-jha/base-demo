@@ -31,8 +31,8 @@ jobs:
           aws ecs --profile core-infra run-task --cluster "${{ }}_git_runner" 
           --launch-type "EC2" --task-definition ne6_git_runner_ext 
           --overrides '{"containerOverrides": [{"name": "ne6_git_runner_ext", 
-             "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
-                {"name": "RUNNER_LABELS", "value": "asdfg"}]}]}'
+           "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
+          {"name": "RUNNER_LABELS", "value": "asdfg"}]}]}'
         shell: bash
 
   build-code:
