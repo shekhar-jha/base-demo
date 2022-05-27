@@ -141,6 +141,5 @@ resource "aws_ecs_task_definition" "git_runner_ext" {
   )
   cpu                      = "256"
   memory                   = "256"
-  requires_compatibilities = ["EC2"]
   network_mode             = "bridge"
 }
