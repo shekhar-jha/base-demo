@@ -15,7 +15,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
+    outputs:
+      gitrunner_task_id: ${{ steps.create-task.task-id }}
+      gitrunner_vm_id: ${{ steps.runner-label.vm-id }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@master
@@ -26,19 +28,27 @@ jobs:
         id: validate
         run: |
           aws sts get-caller-identity
+      - name: Generate Runner label
+        id: runner-label
+        run: |
+          task_vm_id=$(uuidgen)
+          echo "::set-output name=vm-id::$task_vm_id"
       - name: Start ECS Task for Github self-hosted runner
         id: create-task
         run: >
-          aws ecs run-task 
+          github_runner_task_id=$(aws ecs run-task 
           --cluster "${{ github.event.inputs.Env }}_git_runner" --launch-type "EC2" 
-          --task-definition ne6_git_runner_ext --overrides '{"containerOverrides": 
-          [{"name": "ne6_git_runner_ext",
+          --task-definition "${{ github.event.inputs.Env }}_git_runner_ext" --overrides '{"containerOverrides": 
+          [{"name": "${{ github.event.inputs.Env }}_git_runner_ext",
           "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
-          {"name": "RUNNER_LABELS", "value": "asdfg"}]}]}'
+          {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.vm-id }}"}]}]}'
+           --query "tasks[0].taskArn" --output text)
+          
+          echo "::set-output name=task-id::$github_runner_task_id"
 
   build-code:
     needs: activate-github-runner
-    runs-on: [self-hosted, asdfg]
+    runs-on: [self-hosted, "${{ needs.activate-github-runner.outputs.gitrunner_vm_id }}"]
     permissions:
       id-token: write
       contents: read
