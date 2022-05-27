@@ -1,12 +1,17 @@
 name: infra-aws-core
 on:
   workflow_dispatch:
-    branches:
+    branches: infra-core
+    inputs:
+      Env:
+        description: 'Environment'
+        required: true
+        default: 'ne6'
 
 jobs:
   activate-github-runner:
     runs-on: ubuntu-latest
-    environment: ne6
+    environment: ${{ github.event.inputs.Env }}
 
     permissions:
       id-token: write
