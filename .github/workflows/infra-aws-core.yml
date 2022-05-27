@@ -59,7 +59,7 @@ jobs:
       - name: Validate values
         run: |
           echo "VM ID: ${{ needs.activate-github-runner.outputs.gitrunner_vm_id }}"
-          echo "Task ID: ${{ needs.activate-github-runner.outputs.gitrunner_task_id }}
+          echo "Task ID: ${{ needs.activate-github-runner.outputs.gitrunner_task_id }}"
 
   build-code:
     needs: validate-input
