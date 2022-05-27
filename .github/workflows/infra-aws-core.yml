@@ -66,7 +66,7 @@ jobs:
           echo "Task ID: ${{ needs.activate-github-runner.outputs.gitrunner_task_id }}"
 
   build-code:
-    needs: validate-input
+    needs: [validate-input, activate-github-runner]
     runs-on: [self-hosted, "${{ needs.activate-github-runner.outputs.gitrunner_vm_id }}"]
     permissions:
       id-token: write
