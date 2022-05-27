@@ -16,8 +16,8 @@ jobs:
       id-token: write
       contents: read
     outputs:
-      gitrunner_task_id: ${{ steps.create-task.task-id }}
-      gitrunner_vm_id: ${{ steps.runner-label.vm-id }}
+      gitrunner_task_id: ${{ steps.create-task.outputs.task_id }}
+      gitrunner_vm_id: ${{ steps.runner-label.outputs.vm_id }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@master
@@ -32,7 +32,7 @@ jobs:
         id: runner-label
         run: |
           task_vm_id=$(uuidgen)
-          echo "::set-output name=vm-id::$task_vm_id"
+          echo "::set-output name=vm_id::$task_vm_id"
           echo "VM ID generated $task_vm_id"
       - name: Start ECS Task for Github self-hosted runner
         id: create-task
@@ -45,7 +45,7 @@ jobs:
           {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.vm-id }}"}]}]}'
           --query "tasks[0].taskArn" --output text)
           
-          echo "::set-output name=task-id::$github_runner_task_id"
+          echo "::set-output name=task_id::$github_runner_task_id"
           
           echo "Task ID generated $github_runner_task_id"
 
