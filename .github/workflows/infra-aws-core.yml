@@ -14,11 +14,13 @@ on:
           - EC2
           - FARGATE
           - FARGATE_SPOT
-permissions: write-all
 jobs:
   activate-github-runner:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.Env }}
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       gitrunner_vm_id: ${{ steps.runner-label.outputs.vm_id }}
     steps:
@@ -46,7 +48,7 @@ jobs:
           [{"name": "${{ github.event.inputs.Env }}_git_runner_ext",
           "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
           {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.outputs.vm_id }}"},
-          {"name": "GITHUB_TOKEN", "value": "${{ secrets.GITHUB_TOKEN }}"}
+          {"name": "GITHUB_PAT", "value": "${{ secrets.RUNNER_PAT }}"}
           ]}]}'
 
   build-code:
