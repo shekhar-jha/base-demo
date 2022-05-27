@@ -6,14 +6,20 @@ on:
         description: 'Environment'
         required: true
         default: 'ne6'
+      LaunchMode:
+        description: 'Launch mode for Github runner'
+        required: true
+        default: 'EC2'
+        options:
+          - EC2
+          - FARGATE
+          - FARGATE_SPOT
 
 jobs:
   activate-github-runner:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.Env }}
-    permissions:
-      id-token: write
-      contents: read
+    permissions: {write-all}
     outputs:
       gitrunner_vm_id: ${{ steps.runner-label.outputs.vm_id }}
     steps:
@@ -36,11 +42,13 @@ jobs:
         id: create-task
         run: >
           aws ecs run-task 
-          --cluster "${{ github.event.inputs.Env }}_git_runner" --launch-type "EC2" 
+          --cluster "${{ github.event.inputs.Env }}_git_runner" --launch-type "${{ github.event.inputs.LaunchMode }}" 
           --task-definition "${{ github.event.inputs.Env }}_git_runner_ext" --overrides '{"containerOverrides": 
           [{"name": "${{ github.event.inputs.Env }}_git_runner_ext",
           "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
-          {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.outputs.vm_id }}"}]}]}'
+          {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.outputs.vm_id }}"},
+          {"name": "GITHUB_TOKEN", "value": "${{ secrets.GITHUB_TOKEN }}"}
+          ]}]}'
 
   build-code:
     needs: [activate-github-runner]
