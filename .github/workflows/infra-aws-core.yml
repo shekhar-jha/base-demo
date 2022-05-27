@@ -25,4 +25,24 @@ jobs:
       - name: Check identity
         id: validate
         run: |
-          aws sts get-caller-identity 
+          aws sts get-caller-identity
+      - name: Start ECS Task for Github self-hosted runner
+        run: >
+          aws ecs --profile core-infra run-task --cluster "${{ }}_git_runner" 
+          --launch-type "EC2" --task-definition ne6_git_runner_ext 
+          --overrides '{"containerOverrides": [{"name": "ne6_git_runner_ext", 
+             "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
+                {"name": "RUNNER_LABELS", "value": "asdfg"}]}]}'
+        shell: bash
+
+  build-code:
+    needs: activate-github-runner
+    runs-on: [self-hosted, asdfg]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Testing build
+        run: |
+          MY_WD=$(pwd)
+          echo "Hello world ${MY_WD}"
