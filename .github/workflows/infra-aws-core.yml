@@ -1,5 +1,8 @@
 name: infra-aws-core
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    branches:
+
 jobs:
   activate-github-runner:
     runs-on: ubuntu-latest
