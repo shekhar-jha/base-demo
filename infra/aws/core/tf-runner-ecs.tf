@@ -130,16 +130,10 @@ resource "aws_ecs_task_definition" "git_runner_ext" {
           value : "${var.GITHUB_REPO.repo_name}"
         }
       ]
-      secrets : [
-        {
-          "valueFrom" : data.aws_secretsmanager_secret.github-pat.arn
-          "name" : "GITHUB_PAT"
-        }
-      ]
     }
   ]
   )
-  cpu                      = "256"
-  memory                   = "256"
-  network_mode             = "bridge"
+  cpu          = "256"
+  memory       = "256"
+  network_mode = "bridge"
 }
