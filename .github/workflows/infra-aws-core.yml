@@ -41,7 +41,7 @@ jobs:
           echo "VM ID generated $task_vm_id"
       - name: Generate network configuration
         id: net-config
-        if: ${{ inputs.LaunchMode != 'EC2' }}
+        if: ${{ github.event.inputs.LaunchMode != 'EC2' }}
         run: |
           echo "::set-output name=PUBLIC_IP::,assignPublicIp=ENABLED"
       - name: Start ECS Task for Github self-hosted runner
