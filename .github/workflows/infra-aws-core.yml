@@ -39,6 +39,11 @@ jobs:
           task_vm_id=$(uuidgen)
           echo "::set-output name=vm_id::$task_vm_id"
           echo "VM ID generated $task_vm_id"
+      - name: Generate network configuration
+        id: net-config
+        if: ${{ inputs.LaunchMode != 'EC2' }}
+        run: |
+          echo "::set-output name=PUBLIC_IP::,assignPublicIp=ENABLED"
       - name: Start ECS Task for Github self-hosted runner
         id: create-task
         run: >
@@ -50,7 +55,7 @@ jobs:
           {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.outputs.vm_id }}"},
           {"name": "GITHUB_PAT", "value": "${{ secrets.RUNNER_PAT }}"}
           ]}]}'
-          --network-configuration 'awsvpcConfiguration={subnets=[${{ secrets.SUBNET }}],securityGroups=[${{ secrets.SECURITY_GROUP }}],assignPublicIp=ENABLED}'
+          --network-configuration 'awsvpcConfiguration={subnets=[${{ secrets.SUBNET }}],securityGroups=[${{ secrets.SECURITY_GROUP }}]${{ steps.net-config.outputs.PUBLIC_IP }}}'
 
   build-code:
     needs: [activate-github-runner]
