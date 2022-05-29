@@ -90,3 +90,48 @@ resource "aws_iam_role_policy" "github_actions" {
   role   = aws_iam_role.github_actions.id
   policy = data.aws_iam_policy_document.github_actions.json
 }
+
+##########################################
+# Github repo information for reference
+##########################################
+data "github_repository" "base_demo_repo" {
+  full_name = "${var.GITHUB_REPO.repo_owner}/${var.GITHUB_REPO.repo_name}"
+}
+
+##########################################
+# Github repo environment definition
+##########################################
+
+resource "github_repository_environment" "base_demo_env" {
+  repository  = data.github_repository.base_demo_repo.name
+  environment = var.ENV_NAME
+}
+
+resource "github_actions_environment_secret" "base_demo_env_region" {
+  repository      = data.github_repository.base_demo_repo.name
+  environment     = github_repository_environment.base_demo_env.environment
+  secret_name     = "AWS_REGION"
+  plaintext_value = data.aws_region.current.name
+}
+
+resource "github_actions_environment_secret" "base_demo_env_role" {
+  repository      = data.github_repository.base_demo_repo.name
+  environment     = github_repository_environment.base_demo_env.environment
+  secret_name     = "ROLE_TO_ASSUME"
+  plaintext_value = aws_iam_role.github_actions.arn
+}
+
+resource "github_actions_environment_secret" "base_demo_env_security_group" {
+  repository      = data.github_repository.base_demo_repo.name
+  environment     = github_repository_environment.base_demo_env.environment
+  secret_name     = "SECURITY_GROUP"
+  plaintext_value = aws_security_group.git_runner.id
+}
+
+resource "github_actions_environment_secret" "base_demo_env_subnet" {
+  repository      = data.github_repository.base_demo_repo.name
+  environment     = github_repository_environment.base_demo_env.environment
+  secret_name     = "SUBNET"
+  plaintext_value = aws_subnet.public.id
+}
+
