@@ -50,7 +50,7 @@ jobs:
           {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.outputs.vm_id }}"},
           {"name": "GITHUB_PAT", "value": "${{ secrets.RUNNER_PAT }}"}
           ]}]}'
-          --network-configuration 'awsvpcConfiguration={subnets=[${{ secrets.SUBNET }}],securityGroups=[${{ secrets.SECURITY_GROUP }}],assignPublicIp=true}'
+          --network-configuration 'awsvpcConfiguration={subnets=[${{ secrets.SUBNET }}],securityGroups=[${{ secrets.SECURITY_GROUP }}],assignPublicIp=ENABLED}'
 
   build-code:
     needs: [activate-github-runner]
