@@ -44,12 +44,13 @@ jobs:
         run: >
           aws ecs run-task 
           --cluster "${{ github.event.inputs.Env }}_git_runner" --launch-type "${{ github.event.inputs.LaunchMode }}" 
-          --task-definition "${{ github.event.inputs.Env }}_git_runner_ext" --overrides '{"containerOverrides": 
-          [{"name": "${{ github.event.inputs.Env }}_git_runner_ext",
-          "environment" : [{"name": "RUNNER_NAME", "value": "ne6-ext-git_runner-task"},
+          --task-definition "${{ github.event.inputs.Env }}_git_runner" 
+          --overrides '{"containerOverrides": [{"name": "${{ github.event.inputs.Env }}_git_runner_ext",
+          "environment" : [{"name": "RUNNER_NAME", "value": "${{ github.event.inputs.Env }}-git_runner-${{ steps.runner-label.outputs.vm_id }}"},
           {"name": "RUNNER_LABELS", "value": "${{ steps.runner-label.outputs.vm_id }}"},
           {"name": "GITHUB_PAT", "value": "${{ secrets.RUNNER_PAT }}"}
           ]}]}'
+          --network-configuration 'awsvpcConfiguration={subnets=[${{ secrets.SUBNET }}],securityGroups=[${{ secrets.SECURITY_GROUP }}],assignPublicIp=true}'
 
   build-code:
     needs: [activate-github-runner]
