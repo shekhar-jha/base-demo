@@ -89,20 +89,20 @@ resource "aws_ecs_cluster" "git_runner" {
 # AWS ECS Task
 ##########################################
 
-resource "aws_ecs_task_definition" "git_runner" {
-  family                = "${var.ENV_NAME}_git_runner"
+resource "aws_ecs_task_definition" "git_runner_fg" {
+  family                = "${var.ENV_NAME}_fg_git_runner"
   task_role_arn         = aws_iam_role.git_runner_ecs.arn
   execution_role_arn    = aws_iam_role.git_runner_ecs.arn
   container_definitions = jsonencode([
     {
-      name : "${var.ENV_NAME}_git_runner"
+      name : "${var.ENV_NAME}_fg_git_runner"
       image : "${aws_ecr_repository.git_runner.repository_url}:git-runner"
       logConfiguration : {
         logDriver : "awslogs"
         "options" : {
           "awslogs-group" : aws_cloudwatch_log_group.git_runner.name
           "awslogs-region" : data.aws_region.current.name
-          "awslogs-stream-prefix" : "git_runner"
+          "awslogs-stream-prefix" : "${var.ENV_NAME}_fg_git_runner"
         }
       }
       environment : [
@@ -112,7 +112,7 @@ resource "aws_ecs_task_definition" "git_runner" {
         },
         {
           name : "RUNNER_NAME"
-          value : "${var.ENV_NAME}-fg-git_runner"
+          value : "${var.ENV_NAME}_fg_git_runner"
         },
         {
           name : "GITHUB_OWNER"
@@ -127,24 +127,24 @@ resource "aws_ecs_task_definition" "git_runner" {
   ]
   )
   cpu          = "256"
-  memory       = "256"
+  memory       = "512"
   network_mode = "awsvpc"
 }
 
-resource "aws_ecs_task_definition" "git_runner_ext" {
-  family                = "${var.ENV_NAME}_git_runner_ext"
+resource "aws_ecs_task_definition" "git_runner_ec2" {
+  family                = "${var.ENV_NAME}_ec2_git_runner"
   task_role_arn         = aws_iam_role.git_runner_ecs.arn
   execution_role_arn    = aws_iam_role.git_runner_ecs.arn
   container_definitions = jsonencode([
     {
-      name : "${var.ENV_NAME}_git_runner_ext"
+      name : "${var.ENV_NAME}_ec2_git_runner"
       image : "${aws_ecr_repository.git_runner.repository_url}:git-runner"
       logConfiguration : {
         logDriver : "awslogs"
         "options" : {
           "awslogs-group" : aws_cloudwatch_log_group.git_runner.name
           "awslogs-region" : data.aws_region.current.name
-          "awslogs-stream-prefix" : "git_runner_ext"
+          "awslogs-stream-prefix" : "${var.ENV_NAME}_ec2_git_runner"
         }
       }
       environment : [
@@ -154,7 +154,7 @@ resource "aws_ecs_task_definition" "git_runner_ext" {
         },
         {
           name : "RUNNER_NAME"
-          value : "${var.ENV_NAME}-ext-git_runner"
+          value : "${var.ENV_NAME}_ec2_git_runner"
         },
         {
           name : "GITHUB_OWNER"
