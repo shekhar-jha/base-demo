@@ -13,7 +13,6 @@ on:
         options:
           - EC2
           - FARGATE
-          - FARGATE_SPOT
 jobs:
   activate-github-runner:
     runs-on: ubuntu-latest
