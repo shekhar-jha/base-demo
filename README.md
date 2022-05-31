@@ -31,6 +31,7 @@ The environment setup should be run from a machine with internet access to enabl
 
      ```bash
      git clone https://github.com/shekhar-jha/base-demo.git 
+     git checkout infra-core
      cd base-demo/infra/aws/core 
      chmod +x setup.sh
      ./setup.sh -e <Environment name> -c <AWS profile> -r <AWS region> -d
