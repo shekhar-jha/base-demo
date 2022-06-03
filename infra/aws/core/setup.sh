@@ -1,8 +1,8 @@
 #!/bin/bash
 
-. ../../scripts/pgp.sh
-. ../../scripts/cloud.sh
-. ../../scripts/infra.sh
+. ../../common/scripts/pgp.sh
+. ../../common/scripts/cloud.sh
+. ../../common/scripts/infra.sh
 
 export TF_VAR_INFRA_CIDR="10.0.0.0/16"
 usage() { echo "Usage: $0 -e <environment name> -c <aws profile> -r <aws region> [-d]" 1>&2; exit 1;}

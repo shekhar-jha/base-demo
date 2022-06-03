@@ -1,0 +1,4 @@
+[submodule "common-scripts"]
+	path = infra/common
+	url = https://github.com/shekhar-jha/base-demo
+	branch = scripts

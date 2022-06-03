@@ -13,8 +13,8 @@ resource "aws_codecommit_repository" "git_runner" {
   # TODO: Identify how to handle uploading text files.
   provisioner "local-exec" {
     command       = <<-COMMIT
-    source ${path.module}/../../../scripts/aws.sh
-    source ${path.module}/../../../scripts/coderepo.sh
+    source ${path.module}/../../../common/scripts/aws.sh
+    source ${path.module}/../../../common/scripts/coderepo.sh
     CloudInit "${var.ENV_NAME}" "AWS" profile "${var.AWS_ENV_AUTH}" "e" 2
     CodeRepoInit "${var.ENV_NAME}" "AWS" ${aws_codecommit_repository.git_runner.repository_name}
     CodeRepoUpdate "${var.ENV_NAME}" "AWS" ${aws_codecommit_repository.git_runner.repository_name} "${path.module}/../github_runner"
