@@ -1,25 +1,30 @@
 
-# base-demo
-Demonstrate development using terraform on AWS.
+This project demonstrates development using terraform for multi-cloud scenarios across AWS.
 
-
-## Development Installation and Configuration
+# Development Infrastructure
 
 The following section provides details about how to setup development environment
 
-### Pre-requisite
+# Pre-requisite
 
 Ensure that the following tools are installed and setup
 
 1. Git
 2. Terraform
-3. AWS CLI
-4. GNUpg (GPG)
-5. base64
-6. tar
-7. gunzip/gzip
+3. GNUpg (GPG)
+4. base64
+5. tar
+6. gunzip/gzip
 
-### Environment setup (AWS)
+In addition to that depending on the environment being created, one of the following tools must be available.
+
+1. AWS CLI (aws)
+
+## AWS 
+
+TODO: Add environment image
+
+### Environment setup
 
 The environment setup should be run from a machine with internet access to enable terraform to download plugins.
 
@@ -30,8 +35,7 @@ The environment setup should be run from a machine with internet access to enabl
    and `<AWS region>` to identify the region to deploy.
 
      ```bash
-     git clone https://github.com/shekhar-jha/base-demo.git 
-     git checkout infra-core
+     git clone -b infra-core --recursive git@github.com:shekhar-jha/base-demo.git     git checkout infra-core
      cd base-demo/infra/aws/core 
      chmod +x setup.sh
      ./setup.sh -e <Environment name> -c <AWS profile> -r <AWS region> -d
@@ -86,3 +90,4 @@ cd base-demo/infra/aws/core
 chmod +x destroy.sh
 ./destroy.sh -e <Environment name> -c <AWS profile> -r <AWS region>
 ```
+
