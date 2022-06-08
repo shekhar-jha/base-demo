@@ -355,6 +355,13 @@ function PGPGetKey {
   if [ $get_key_ret_code -eq 0 ] && [ -f "${PGP_PATH_KEY}" ];
   then
     base64 -D < "${PGP_PATH_KEY}" > "${PGP_PATH_KEY}.tmp"
+    decode_ret_code=$?
+    if [[ $decode_ret_code -ne 0 ]]; then
+      echo "PGPGetKey: Decoding key ${PGP_KEY_NAME} failed with error ${decode_ret_code}"
+      cat "${PGP_PATH_KEY}.tmp"
+      rm "${PGP_PATH_KEY}.tmp"
+      ReturnOrExit "${5:-Exit}" "${6:-1}" "5"; return $?
+    fi
     mv "${PGP_PATH_KEY}.tmp" "${PGP_PATH_KEY}"
     echo "PGPGetKey: Stored key ${PGP_KEY_NAME} retrieved and saved at ${PGP_PATH_KEY} successfully."
   else
