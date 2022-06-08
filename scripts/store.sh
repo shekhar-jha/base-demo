@@ -32,8 +32,22 @@ function StoreKey {
       fi
       ;;
 
+    GCP)
+      . "${SCRIPT_DEFAULT_HOME}"/gcpSecret.sh
+      IsAvailable f GCPSecretCreate "GCPSecretCreate function"
+      local gcpStoreKey_status
+      gcpStoreKey_status=$(GCPSecretCreate "${STORE_SCOPE}" "${STORE_KEY}" "${STORE_VALUE}" "${STORE_VALUE_TYPE}")
+      local gcpStoreKey_ret_code=$?
+      if [ $gcpStoreKey_ret_code -ne 0 ];
+      then
+        echo "Failed to store key ${STORE_KEY} in GCP due to error ${gcpStoreKey_ret_code}"
+        echo "${gcpStoreKey_status}"
+        ReturnOrExit "${6:-Exit}" "${7:-1}" "4"; return $?
+      fi
+      ;;
+
     *)
-      echo "StoreKey: Only AWS Store type is currently supported."
+      echo "StoreKey: Only AWS and GCP Store type is currently supported."
       ReturnOrExit "${6:-Exit}" "${7:-1}" "3"; return $?
       ;;
   esac
@@ -67,12 +81,28 @@ function StoreKeyExists {
       fi
       ;;
 
+    GCP)
+      . "${SCRIPT_DEFAULT_HOME}"/gcp.sh
+      IsAvailable f GCPResourceExists "GCPResourceExists function"
+      GCPResourceExists "${STORE_SCOPE}" 'secrets' "${STORE_KEY}" 'r'
+      local gcpContainsKey_ret_code=$?
+      if [ $gcpContainsKey_ret_code -eq 0 ];
+      then
+        return 0
+      fi
+      if [ $gcpContainsKey_ret_code -eq 1 ];
+      then
+        return 1
+      else
+        ReturnOrExit "${4:-Exit}" "${5:-1}" "2"; return $?
+      fi
+      ;;
+
     *)
-      echo "StoreKeyExists: Only AWS Store type is currently supported."
+      echo "StoreKeyExists: Only AWS and GCP Store type is currently supported."
       ReturnOrExit "${4:-Exit}" "${5:-1}" "4"; return $?
       ;;
   esac
-
 }
 
 function GetStoredKey {
@@ -104,8 +134,23 @@ function GetStoredKey {
       fi
       ;;
 
+    GCP)
+      . "${SCRIPT_DEFAULT_HOME}"/gcpSecret.sh
+      IsAvailable f GCPGetSecret "GCPGetSecret function"
+      gcpGetKeyValue=$(GCPGetSecret "${STORE_SCOPE}" "${STORE_KEY}" "${STORE_VALUE}" "${STORE_VALUE_TYPE}")
+      local gcpGetKey_ret_code=$?
+      if [ $gcpGetKey_ret_code -ne 0 ];
+      then
+        echo "GetStoredKey: Failed to read key from GCP due to error ${gcpGetKey_ret_code}"
+        echo "${gcpGetKeyValue}"
+        ReturnOrExit "${6:-Exit}" "${7:-1}" "4"; return $?
+      else
+        echo "${gcpGetKeyValue}"
+      fi
+      ;;
+
     *)
-      echo "GetStoredKey: Only AWS Store type is currently supported."
+      echo "GetStoredKey: Only AWS and GCP Store type is currently supported."
       ReturnOrExit "${6:-Exit}" "${7:-1}" "3"; return $?
       ;;
   esac
@@ -171,6 +216,19 @@ function StoreFile {
       fi
       ;;
 
+    GCP)
+      . "${SCRIPT_DEFAULT_HOME}"/gcpFileStore.sh
+      IsAvailable f GCPStoreFile "GCPStoreFile function"
+      local gcpStoreFile_status
+      gcpStoreFile_status=$(GCPStoreFile "${STORE_SCOPE}" "${STORE_FILE_SRC}" "${STORE_FILE_DEST}")
+      local gcpStoreFile_ret_code=$?
+      if [ $gcpStoreFile_ret_code -ne 0 ]; then
+        echo "Failed to store file in GCP due to error ${gcpStoreFile_ret_code}"
+        echo "${gcpStoreFile_status}"
+        ReturnOrExit "${5:-Exit}" "${6:-1}" "4"; return $?
+      fi
+      ;;
+
     *)
       echo "StoreFile: Only AWS Store type is currently supported."
       ReturnOrExit "${5:-Exit}" "${6:-1}" "3"; return $?
@@ -198,11 +256,26 @@ function GetStoredFile {
       local awsGetFile_ret_code=$?
       if [ $awsGetFile_ret_code -ne 0 ];
       then
-        echo "GetStoredFile: Failed to read key from AWS due to error ${awsGetKey_ret_code}"
+        echo "GetStoredFile: Failed to read file from AWS due to error ${awsGetKey_ret_code}"
         echo "${awsGetFileValue}"
         ReturnOrExit "${5:-Exit}" "${6:-1}" "2"; return $?
       else
         echo "${awsGetFileValue}"
+      fi
+      ;;
+
+    GCP)
+      . "${SCRIPT_DEFAULT_HOME}"/gcpFileStore.sh
+      IsAvailable f GCPGetFile "GCPGetFile function"
+      gcpGetFileValue=$(GCPGetFile "${STORE_SCOPE}" "${STORE_FILE_NAME}" "${STORE_FILE_PATH}")
+      local gcpGetFile_ret_code=$?
+      if [ $gcpGetFile_ret_code -ne 0 ];
+      then
+        echo "GetStoredFile: Failed to read file from GCP due to error ${gcpGetFile_ret_code}"
+        echo "${gcpGetFileValue}"
+        ReturnOrExit "${5:-Exit}" "${6:-1}" "4"; return $?
+      else
+        echo "${gcpGetFileValue}"
       fi
       ;;
 
