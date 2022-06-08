@@ -104,6 +104,7 @@ The environment setup should be run from a machine with internet access to enabl
 1. Ensure that either the following command has been run or you have credential file to login during execution
    ```google cloud
    gcloud auth application-default login
+   gcloud auth login
    ```
 2. Set the environment variable `GITHUB_TOKEN` to Github PAT with `repo` permission to update repo environment variables.
 3. If a new environment needs to be setup, run the following commands after replacing `<Environment name>` with name of
