@@ -44,6 +44,11 @@ function InfraInit {
     . "${SCRIPT_DEFAULT_HOME}/pgp.sh"
     IsAvailable f PGPGetKeyIfNotExists "PGPGetKeyIfNotExists function"
     PGPGetKeyIfNotExists "${INFRA_SCOPE}" 'PUB' "${INFRA_KEY_BACKEND_TYPE}" "${INFRA_BASE}"
+    local get_key_ret_val=$?
+    if [[ $get_key_ret_val -ne 0 ]]; then
+        echo "InfraInit: Failed to initialize terraform since failed to retrieve PGP public key with error code ${get_key_ret_val}"
+        ReturnOrExit "${5:-Exit}" "${6:-1}" "4"; return $?
+    fi
   fi
   echo "Initialized ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE}."
 }
@@ -93,7 +98,7 @@ function InfraApply {
   esac
   echo "Applied change to ${INFRA_TYPE} state for ${INFRA_SCOPE}."
   return $RETURN_VALUE
-} 
+}
 
 function InfraGetConfig {
   if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ];
@@ -154,7 +159,7 @@ function InfraSaveState {
     local INFRA_STATE_BACKEND_TYPE="${3}"
     local INFRA_KEY_BACKEND_TYPE="${4}"
     local INFRA_STATE_STORE_NAME="${5}"
-    local INFRA_HOME="${5:-$INFRA_DEFAULT_HOME}"
+    local INFRA_HOME="${6:-$INFRA_DEFAULT_HOME}"
     local INFRA_STATE_FILE_NAME
     local INFRA_STATE_FILE_PATH
     local INFRA_BASE
@@ -224,6 +229,15 @@ function InfraSaveState {
         INFRA_STORE_FILE_NAME="${INFRA_STATE_STORE_NAME}/${INFRA_STATE_FILE_NAME}"
         ;;
 
+      GCP)
+        if [[ "${INFRA_STATE_STORE_NAME}" == "" ]];
+        then
+          echo "InfraSaveState: Failed to save state to GCP backend since the name of state bucket is not available."
+          ReturnOrExit "${7:-Exit}" "${8:-1}" "10"; return $?
+        fi
+        INFRA_STORE_FILE_NAME="${INFRA_STATE_STORE_NAME}/${INFRA_STATE_FILE_NAME}"
+        ;;
+
       *)
         echo "InfraSaveState: Only AWS backend is currently supported."
         ReturnOrExit "${7:-Exit}" "${8:-1}" "8"; return $?
@@ -270,7 +284,7 @@ function InfraLoadState {
 
       *)
         echo "InfraLoadState: Only Terraform infra config type is currently supported."
-        ReturnOrExit "${7:-Exit}" "${8:-1}" "3"; return $?
+        ReturnOrExit "${7:-Exit}" "${8:-1}" "10"; return $?
         ;;
     esac
     local INFRA_STORE_FILE_NAME
@@ -283,6 +297,15 @@ function InfraLoadState {
           ReturnOrExit "${7:-Exit}" "${8:-1}" "7"; return $?
         fi
         INFRA_STORE_FILE_NAME="${INFRA_STATE_STORE_NAME}/${INFRA_STATE_FILE_NAME}"
+        ;;
+
+      GCP)
+        if [[ "${INFRA_STATE_STORE_NAME}" == "" ]];
+        then
+          echo "InfraLoadState: Failed to load state for GCP since the name of state bucket is not available."
+          ReturnOrExit "${7:-Exit}" "${8:-1}" "9"; return $?
+        fi
+        INFRA_STORE_FILE_NAME="${INFRA_STATE_STORE_NAME}${INFRA_STATE_FILE_NAME}"
         ;;
 
       *)
@@ -301,7 +324,7 @@ function InfraLoadState {
     if [[ $get_file_ret_code -ne 0 ]];
     then
       echo "InfraLoadState: Failed to load infra state from store due to error ${get_file_ret_code}"
-      ReturnOrExit "${7:-Exit}" "${8:-1}" "9"; return $?
+      ReturnOrExit "${7:-Exit}" "${8:-1}" "11"; return $?
     fi
     if [[ ! -f ${INFRA_STATE_ENCRYPTED_FILE_PATH} ]];
     then
