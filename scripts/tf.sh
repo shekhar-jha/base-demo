@@ -360,8 +360,13 @@ function TFGetConfig {
     echo "${output_status}"
     ReturnOrExit "${4:-Exit}" "${5:-1}" "3"; return $?
   fi
-  output_value=$(echo "${output_status}" | cut -f 2 -d '"')
-  echo "${output_value}"
+  no_output_check=$(echo "${output_status}" | grep "No outputs found")
+  if [[ "${no_output_check}" != "" ]]; then
+    echo ""
+  else
+    output_value=$(echo "${output_status}" | cut -f 2 -d '"')
+    echo "${output_value}"
+  fi
 }
 
 
