@@ -199,7 +199,7 @@ function AWSStoreKey {
 
 function AWSGetKey {
   if [ "${1}" == "" ] || [ "${2}" == "" ] || [ "${3}" == "" ]; then
-    echo 'AWSGetKey <Scope> <Key name> [<Value type: [F|f]ile*|[S|s]tring>] [<File Location>] [<Key Description>] [<Return: Exit*|Return>] [Exit code]'
+    echo 'AWSGetKey <Scope> <Key name> [<File Location>] [<Value type: [F|f]ile*|[S|s]tring>] [<Key Description>] [<Return: Exit*|Return>] [Exit code]'
     ReturnOrExit "${6:-Exit}" "${7:-1}" "1"
     return $?
   fi
