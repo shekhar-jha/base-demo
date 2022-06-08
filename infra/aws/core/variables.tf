@@ -3,8 +3,8 @@ variable "ENV_NAME" {
   description = "Name of the environment being created"
   nullable    = false
   validation {
-    condition     = length(var.ENV_NAME) != 4
-    error_message = "Environment variable should be 4 letter."
+    condition     = length(var.ENV_NAME) < 5
+    error_message = "Environment variable should be less than or equal to 4 letters."
   }
 }
 variable "AWS_ENV_AUTH" {
