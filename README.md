@@ -1,25 +1,31 @@
 
-# base-demo
-Demonstrate development using terraform on AWS.
+This project demonstrates development using terraform for multi-cloud scenarios across AWS and GCP.
 
-
-## Development Installation and Configuration
+# Development Infrastructure
 
 The following section provides details about how to setup development environment
 
-### Pre-requisite
+# Pre-requisite
 
 Ensure that the following tools are installed and setup
 
 1. Git
 2. Terraform
-3. AWS CLI
-4. GNUpg (GPG)
-5. base64
-6. tar
-7. gunzip/gzip
+3. GNUpg (GPG)
+4. base64
+5. tar
+6. gunzip/gzip
 
-### Environment setup (AWS)
+In addition to that depending on the environment being created, one of the following tools must be available.
+
+1. AWS CLI (aws)
+2. GCP SDK (gcloud)
+
+## AWS
+
+TODO: Add environment image
+
+### Environment setup
 
 The environment setup should be run from a machine with internet access to enable terraform to download plugins.
 
@@ -30,7 +36,7 @@ The environment setup should be run from a machine with internet access to enabl
    and `<AWS region>` to identify the region to deploy.
 
      ```bash
-     git clone https://github.com/shekhar-jha/base-demo.git 
+     git clone -b infra-core --recursive git@github.com:shekhar-jha/base-demo.git     git checkout infra-core
      cd base-demo/infra/aws/core 
      chmod +x setup.sh
      ./setup.sh -e <Environment name> -c <AWS profile> -r <AWS region> -d
@@ -85,3 +91,33 @@ cd base-demo/infra/aws/core
 chmod +x destroy.sh
 ./destroy.sh -e <Environment name> -c <AWS profile> -r <AWS region>
 ```
+
+# GCP
+
+The GCP environment consists of the following components
+TODO: Image and description
+
+## Environment setup
+
+The environment setup should be run from a machine with internet access to enable terraform to download plugins.
+
+1. Ensure that either the following command has been run or you have credential file to login during execution
+   ```google cloud
+   gcloud auth application-default login
+   gcloud auth login
+   ```
+2. Set the environment variable `GITHUB_TOKEN` to Github PAT with `repo` permission to update repo environment variables.
+3. If a new environment needs to be setup, run the following commands after replacing `<Environment name>` with name of
+   the environment (without spaces and 3 letters), `<Project>` with name of GCP project to use to setup environment,
+   and `<GCP region>` to identify the region to deploy.
+
+     ```bash
+     git clone -b infra-core --recursive git@github.com:shekhar-jha/base-demo.git     git checkout infra-core
+     cd base-demo/infra/gcp/core 
+     chmod +x g-setup.sh
+     ./g-setup.sh -e <Environment name> -p <Project> -r <GCP region> -d
+     ```
+   This will ensure that all the dependencies are created and initial state and keys will be saved for future reference.
+   The `-d` triggers the download of `Terraform` plugins.
+
+
