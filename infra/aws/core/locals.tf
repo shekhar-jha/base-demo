@@ -2,7 +2,7 @@ resource "random_string" "ENV_SUFFIX" {
   length  = 4
   upper   = false
   lower   = true
-  number  = true
+  numeric  = true
   special = false
 }
 data "aws_caller_identity" "current" {}
