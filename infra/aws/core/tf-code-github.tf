@@ -9,13 +9,19 @@ data "external" "github-thumbprint" {
 ##########################################
 # AWS OpenID Connect provider for Github
 ##########################################
+
+data "aws_iam_openid_connect_provider" "existing_github" {
+  count = 0
+  url   = "https://token.actions.githubusercontent.com"
+}
+
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = [data.external.github-thumbprint.result.print]
   tags            = {
     Name        = "${var.ENV_NAME} Github OIDC Provider"
-    Environment = "${var.ENV_NAME}"
+    Environment = var.ENV_NAME
   }
 }
 
@@ -28,7 +34,9 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [
+        length(data.aws_iam_openid_connect_provider.existing_github) != 0 ?data.aws_iam_openid_connect_provider.existing_github[0].id : aws_iam_openid_connect_provider.github.arn
+      ]
     }
     condition {
       test     = "StringEquals"
@@ -46,7 +54,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
 }
 
 resource "aws_iam_role" "github_actions" {
-  name               = "github-actions"
+  name               = "${var.ENV_NAME}_github-actions"
   assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
   tags               = {
     Name        = "${var.ENV_NAME} Github Role"
@@ -86,7 +94,7 @@ data "aws_iam_policy_document" "github_actions" {
 }
 
 resource "aws_iam_role_policy" "github_actions" {
-  name   = "git_hub_actions_access"
+  name   = "${var.ENV_NAME}_git_hub_actions_access"
   role   = aws_iam_role.github_actions.id
   policy = data.aws_iam_policy_document.github_actions.json
 }

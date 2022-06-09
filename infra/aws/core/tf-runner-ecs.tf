@@ -16,7 +16,7 @@ resource "aws_cloudwatch_log_group" "git_runner" {
 ##########################################
 
 resource "aws_iam_role" "git_runner_ecs" {
-  name = "git_runner_ecs"
+  name = "${var.ENV_NAME}_git_runner_ecs"
   path = "/"
   tags = {
     Name        = "${var.ENV_NAME} Github runner ECS Task role"
@@ -40,13 +40,13 @@ resource "aws_iam_role" "git_runner_ecs" {
 }
 
 resource "aws_iam_policy_attachment" "git_runner_ecs" {
-  name       = "ssm-policy-attachment"
+  name       = "${var.ENV_NAME}-ssm-policy-attachment"
   roles      = [aws_iam_role.git_runner_ecs.name]
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy" "git_runner_ecs" {
-  name_prefix = "git_runner"
+  name_prefix = "${var.ENV_NAME}_git_runner_for_ecs_task"
   role        = aws_iam_role.git_runner_ecs.name
   policy      = jsonencode({
     Version   = "2012-10-17"

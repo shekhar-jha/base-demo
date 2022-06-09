@@ -13,8 +13,8 @@ resource "aws_codecommit_repository" "git_runner" {
   # TODO: Identify how to handle uploading text files.
   provisioner "local-exec" {
     command       = <<-COMMIT
-    source ${path.module}/../../common/scripts/aws.sh
-    source ${path.module}/../../common/scripts/coderepo.sh
+    source ${path.module}/../../../common/scripts/aws.sh
+    source ${path.module}/../../../common/scripts/coderepo.sh
     CloudInit "${var.ENV_NAME}" "AWS" profile "${var.AWS_ENV_AUTH}" "e" 2
     CodeRepoInit "${var.ENV_NAME}" "AWS" ${aws_codecommit_repository.git_runner.repository_name}
     CodeRepoUpdate "${var.ENV_NAME}" "AWS" ${aws_codecommit_repository.git_runner.repository_name} "${path.module}/../github_runner"
@@ -23,7 +23,7 @@ resource "aws_codecommit_repository" "git_runner" {
   }
 }
 resource "aws_iam_role_policy" "git_runner_code_commit" {
-  name_prefix = "git_runner_code_commit_access"
+  name = "${var.ENV_NAME}_git_runner_code_commit_access"
   role        = aws_iam_role.git_runner.name
   policy = jsonencode({
     Version = "2012-10-17"
@@ -60,7 +60,7 @@ resource "aws_ecr_repository" "git_runner" {
 }
 
 resource "aws_iam_role_policy" "git_runner_ecr" {
-  name_prefix = "git_runner_code_ecr"
+  name = "${var.ENV_NAME}_git_runner_code_ecr_access"
   role        = aws_iam_role.git_runner.name
   policy = jsonencode({
     Version = "2012-10-17"

@@ -118,7 +118,7 @@ resource "aws_security_group_rule" "git_runner_egress" {
 ##########################################
 
 resource "aws_iam_instance_profile" "git_runner" {
-  name_prefix = "git_runner"
+  name = "${var.ENV_NAME}_git_runner_ec2"
   role        = aws_iam_role.git_runner.name
   tags        = {
     Name        = "${var.ENV_NAME} Github runner Instance profile"
@@ -127,7 +127,7 @@ resource "aws_iam_instance_profile" "git_runner" {
 }
 
 resource "aws_iam_role" "git_runner" {
-  name_prefix = "git_runner"
+  name = "${var.ENV_NAME}_git_runner_ec2"
   path        = "/"
   tags        = {
     Name        = "${var.ENV_NAME} Github runner Instance role"
@@ -151,7 +151,7 @@ resource "aws_iam_role" "git_runner" {
 }
 
 resource "aws_iam_role_policy" "git_runner" {
-  name_prefix = "git_runner"
+  name = "${var.ENV_NAME}_git_runner_for_ec2"
   role        = aws_iam_role.git_runner.name
 
   policy = jsonencode({
