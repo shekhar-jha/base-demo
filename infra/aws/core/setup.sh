@@ -62,6 +62,7 @@ env_name=$(echo "${ENV_NAME}" | tr '[:upper:]' '[:lower:]')
 export env_name
 
 CloudInit "${ENV_NAME}" "${INFRA_CLOUD_TYPE}" profile "${CLOUD_PROFILE}" "e" 2
+export TF_VAR_AWS_ENV_AUTH="${CLOUD_PROFILE}"
 PGPKeyExistsInStore "${env_name}" 'KEY' "${INFRA_CLOUD_TYPE}"; key_exists_in_store=$?
 PGPKeyExistsInStore "${env_name}" 'PUB' "${INFRA_CLOUD_TYPE}"; pub_exists_in_store=$?
 if [[ $key_exists_in_store -eq 1 ]] || [[ $pub_exists_in_store -eq 1 ]];

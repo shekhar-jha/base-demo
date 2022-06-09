@@ -61,6 +61,7 @@ env_name=$(echo "${ENV_NAME}" | tr '[:upper:]' '[:lower:]')
 export env_name
 
 CloudInit "${ENV_NAME}" "${INFRA_CLOUD_TYPE}" profile "${CLOUD_PROFILE}" "e" 2
+export TF_VAR_AWS_ENV_AUTH="${CLOUD_PROFILE}"
 export INFRA_STORE_BUCKET=$(CloudGetResource "${env_name}" "${INFRA_CLOUD_TYPE}" "FileStore" "${env_name}-tf-state" )
 InfraLoadState "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_STORE_BUCKET}" '' 'e' 11
 InfraInit "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 7
