@@ -10,12 +10,15 @@ data "external" "github-thumbprint" {
 # AWS OpenID Connect provider for Github
 ##########################################
 
-data "aws_iam_openid_connect_provider" "existing_github" {
-  count = 0
-  url   = "https://token.actions.githubusercontent.com"
+data "external" "existing_open-id_connect_provider" {
+  program = [
+    "bash", "./get-iam-provider.sh.tpl", var.AWS_ENV_AUTH
+  ]
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
+  count = (data.external.existing_open-id_connect_provider.result.env_tag_value == "" ||
+  data.external.existing_open-id_connect_provider.result.env_tag_value == var.ENV_NAME)?1 : 0
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = [data.external.github-thumbprint.result.print]
@@ -35,7 +38,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
     principals {
       type        = "Federated"
       identifiers = [
-        length(data.aws_iam_openid_connect_provider.existing_github) != 0 ?data.aws_iam_openid_connect_provider.existing_github[0].id : aws_iam_openid_connect_provider.github.arn
+        data.external.existing_open-id_connect_provider.result.provider_name != "" ?data.external.existing_open-id_connect_provider.result.provider_name : aws_iam_openid_connect_provider.github[0].arn
       ]
     }
     condition {
