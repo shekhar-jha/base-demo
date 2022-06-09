@@ -71,23 +71,16 @@ function InfraApply {
     't'|'T'|'Terraform'|'terraform')
       . "${SCRIPT_DEFAULT_HOME}/tf.sh"
       IsAvailable f TFApply "Terraform apply (TFApply) function"
-      local tfApply_status
-      tfApply_status=$(TFApply "${INFRA_SCOPE}" "${INFRA_OPS}" "${INFRA_TARGET}" "${INFRA_HOME}" 2>&1)
+      TFApply "${INFRA_SCOPE}" "${INFRA_OPS}" "${INFRA_TARGET}" "${INFRA_HOME}"
       local tfApply_ret_code=$?
       if [ $tfApply_ret_code -eq 1 ];
       then
         RETURN_VALUE=1
-        echo "${tfApply_status}"
       fi
       if [ $tfApply_ret_code -gt 1 ];
       then
         echo "InfraApply: Failed to apply infrastructure using terraform due to error ${tfApply_ret_code}"
-        echo "${tfApply_status}"
         ReturnOrExit "${6:-Exit}" "${7:-1}" "2"; return $?
-      fi
-      if [ $tfApply_ret_code -eq 0 ];
-      then
-        echo "${tfApply_status}"
       fi
       ;;
 
@@ -163,7 +156,7 @@ function InfraSaveState {
     local INFRA_STATE_FILE_NAME
     local INFRA_STATE_FILE_PATH
     local INFRA_BASE
-    echo "Saving ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE} to ${INFRA_STATE_STORE_NAME} on ${INFRA_STATE_STORE_NAME}"
+    echo "Saving ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE} to ${INFRA_STATE_STORE_NAME} on ${INFRA_STATE_BACKEND_TYPE}"
     echo "Cleaning up key files..."
     case "${INFRA_CONFIG_TYPE}" in
       t|T|Terraform|terraform)
@@ -254,7 +247,7 @@ function InfraSaveState {
     fi
     echo "Deleting the state file ${INFRA_STORE_FILE_NAME} present at ${INFRA_STATE_ENCRYPTED_FILE_PATH}"
     rm -rf "${INFRA_STATE_ENCRYPTED_FILE_PATH}"
-    echo "Saved ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE} to ${INFRA_STATE_STORE_NAME} on ${INFRA_STATE_STORE_NAME}"
+    echo "Saved ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE} to ${INFRA_STATE_STORE_NAME} on ${INFRA_STATE_BACKEND_TYPE}"
 }
 
 
