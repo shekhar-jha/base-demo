@@ -321,16 +321,12 @@ function TFApply {
   fi
   if [ $plan_ret_code -eq 2 ];
   then
-    local apply_status
-    apply_status=$(terraform -chdir="${TF_BASE}" apply -no-color -compact-warnings -input=false -auto-approve -backup="${TF_STATE_BACKUP}" -state="${TF_STATE}" "${TF_PLAN}"  2>&1)
+    terraform -chdir="${TF_BASE}" apply -no-color -compact-warnings -input=false -auto-approve -backup="${TF_STATE_BACKUP}" -state="${TF_STATE}" "${TF_PLAN}"
     local apply_ret_code=$?
     if [ $apply_ret_code -ne 0 ];
     then
       echo "TFApply: Failed to apply the terraform script with return error code ${apply_ret_code}"
-      echo "${apply_status}"
       ReturnOrExit "${5:-Return}" "${6:-1}" "6"; return $?
-    else
-      echo "${apply_status}"
     fi
   fi
 }
@@ -345,14 +341,14 @@ function TFGetConfig {
   local TF_KEY_NAME="${2}"
   local TF_HOME="${3:-$TF_DEFAULT_HOME}"
   local TF_BASE="${TF_HOME}/${TF_SCOPE}_terraform"
-
+  local TF_STATE="${TF_BASE}/${TF_SCOPE}_terraform.tfstate"
   if [ ! -d "${TF_BASE}" ];
   then
     echo "TFGetConfig: Failed to return config due to missing terraform directory ${TF_BASE}"
     ReturnOrExit "${4:-Exit}" "${5:-1}" "2"; return $?
   fi
   local output_status
-  output_status=$(terraform -chdir="${TF_BASE}" output "${TF_KEY_NAME}" 2>&1)
+  output_status=$(terraform -chdir="${TF_BASE}" output -state="${TF_STATE}" -no-color "${TF_KEY_NAME}" 2>&1)
   output_ret_code=$?
   if [ $output_ret_code -ne 0 ];
   then
