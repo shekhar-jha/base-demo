@@ -36,7 +36,7 @@ The environment setup should be run from a machine with internet access to enabl
    and `<AWS region>` to identify the region to deploy.
 
      ```bash
-     git clone -b infra-core --recursive git@github.com:shekhar-jha/base-demo.git     git checkout infra-core
+     git clone -b infra-core --recursive git@github.com:shekhar-jha/base-demo.git
      cd base-demo/infra/aws/core 
      chmod +x setup.sh
      ./setup.sh -e <Environment name> -c <AWS profile> -r <AWS region> -d
