@@ -4,6 +4,9 @@ terraform {
     google = {
       source = "hashicorp/google"
     }
+    google-beta = {
+      source = "hashicorp/google-beta"
+    }
     github = {
       source = "integrations/github"
     }
@@ -11,6 +14,13 @@ terraform {
 }
 
 provider "google" {
+  # Assumes the Application default authentication
+  # has already been performed.
+  region  = var.GCP_REGION
+  project = var.GCP_PROJECT
+}
+
+provider "google-beta" {
   # Assumes the Application default authentication
   # has already been performed.
   region  = var.GCP_REGION

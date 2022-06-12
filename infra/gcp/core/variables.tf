@@ -15,6 +15,10 @@ variable "GCP_PROJECT" {
   type        = string
   description = "Name of the project in which resource should be managed."
 }
+variable "GCP_ID" {
+  type        = string
+  description = "User Identity being used to run the terraform script"
+}
 variable "TF_ENV" {
   type = object({
     http_proxy = string
