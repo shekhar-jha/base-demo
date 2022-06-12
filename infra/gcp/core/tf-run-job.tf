@@ -56,6 +56,7 @@ resource "null_resource" "git_runner_image" {
 resource "null_resource" "git_runner_job" {
   triggers = {
     image_exists = data.external.git_runner_job.result.image == ""?"false" : "true"
+    job_name     = local.git_runner_build_name
   }
   provisioner "local-exec" {
     command = <<-JOB_CREATED
@@ -71,6 +72,12 @@ resource "null_resource" "git_runner_job" {
       exit 1
     fi
     JOB_CREATED
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-JOB_DELETED
+    gcloud beta run jobs delete ${self.triggers.job_name}
+    JOB_DELETED
   }
   depends_on = [
     null_resource.commit_git_runner, google_secret_manager_secret_iam_member.github_pat,

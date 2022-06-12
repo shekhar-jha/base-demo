@@ -1,0 +1,82 @@
+# This is a basic workflow to help you get started with Actions
+
+name: GCP Git-runner test
+
+# Controls when the workflow will run
+on:
+  workflow_dispatch:
+    inputs:
+      Env:
+        description: 'Environment'
+        required: true
+        default: 'dev'
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  activate-github-runner:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.Env }}
+    permissions:
+      # Add "id-token" with the intended permissions.
+      id-token: write
+      contents: read
+    outputs:
+      gitrunner_vm_id: ${{ steps.runner-label.outputs.vm_id }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout
+        uses: 'actions/checkout@v3'
+
+      # Configure workload identity federation
+      - name: Authenticate to Google Cloud
+        id: gcp_auth
+        uses: 'google-github-actions/auth@v0'
+        with:
+          workload_identity_provider: ${{ secrets.GCP_Workload_IDP_Name }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCT }}
+
+      # Install gcloud, `setup-gcloud` automatically picks up authentication from `auth`.
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
+        with:
+          install_components: 'beta'
+
+      # Check the active identity of login user
+      - name: Check identity
+        id: validate
+        run: |
+          gcloud auth list
+
+      - name: Generate Runner label
+        id: runner-label
+        run: |
+          task_vm_id=$(uuidgen)
+          echo "::set-output name=vm_id::$task_vm_id"
+          echo "VM ID generated $task_vm_id"
+
+      - name: Update Job
+        id: gcp-job-update
+        run: >
+          gcloud beta run jobs update ${{ secrets.GCP_CLOUD_RUN_JOB_NAME }} --region=${{ secrets.GCP_REGION }} 
+          --update-env-vars=RUNNER_NAME=${{ github.event.inputs.Env }}-gcp-${{ steps.runner-label.outputs.vm_id }}
+          --update-env-vars=RUNNER_LABELS=${{ steps.runner-label.outputs.vm_id }}
+
+      - name: Run job
+        id: gcp-job-run
+        run: >
+          gcloud beta run jobs execute ${{ secrets.GCP_CLOUD_RUN_JOB_NAME }} --region=${{ secrets.GCP_REGION }} 
+
+  build-code:
+    needs: [ activate-github-runner ]
+    runs-on: [ self-hosted, "${{ needs.activate-github-runner.outputs.gitrunner_vm_id }}" ]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Testing build
+        run: |
+          MY_WD=$(pwd)
+          echo "Hello world ${MY_WD}"
