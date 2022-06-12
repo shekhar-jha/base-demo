@@ -210,6 +210,10 @@ function GCPResourceExists {
     query_cmd="gsutil ls -b gs://${GCP_RES_NAME}*"
     ;;
 
+  'CurrentIdentity')
+    query_cmd="gcloud auth list --filter=status=Active --format=value(account)"
+    ;;
+
   *)
     echo "GCPResourceExists: ${GCP_RES_TYPE} is not supported. Only secrets is supported as resource type."
     ReturnOrExit "${4:-Exit}" "${5:-1}" "3"
@@ -248,8 +252,12 @@ function GCPActivate {
     service_name='secretmanager.googleapis.com'
     ;;
 
+  'build')
+    service_name='cloudbuild.googleapis.com'
+    ;;
+
   *)
-    echo "GCPActivate: ${GCP_SERVICE} is not supported. Only secrets is supported as activation service."
+    echo "GCPActivate: ${GCP_SERVICE} is not supported. Only secrets are supported as activation service."
     ReturnOrExit "${3:-Exit}" "${4:-1}" "2"
     return $?
     ;;
