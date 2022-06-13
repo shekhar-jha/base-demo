@@ -118,6 +118,14 @@ The environment setup should be run from a machine with internet access to enabl
      ./g-setup.sh -e <Environment name> -p <Project> -r <GCP region> -d
      ```
    This will ensure that all the dependencies are created and initial state and keys will be saved for future reference.
-   The `-d` triggers the download of `Terraform` plugins.
-
-
+   The `-d` triggers the download of `Terraform` plugins. Due to the current approach,
+4. After running the command for first time, the secret will be enabled. After which the Github PAT for registering the 
+   Github runner token needs to be created with name `github_pat-<github repo owner>-<github repo name>` and corresponding
+   token value in the same region as specified in the call above.
+5. Invoke the `g-setup.sh` command again to set-up and trigger the github runner image build process 
+   ```bash
+     ./g-setup.sh -e <Environment name> -p <Project> -r <GCP region> -d
+     ```
+6. After the image creation is complete, invoke the above `g-setup.sh` command again to create the Cloud run job and other dependencies.
+7. Manually invoke the `GCP Git-runner test` action workflow on the Github with environment name same as above to validate 
+   the setup is working correctly.
