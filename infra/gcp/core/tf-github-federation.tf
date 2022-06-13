@@ -80,7 +80,7 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
     "attribute.repository"       = "assertion.repository"
     "attribute.repository_owner" = "assertion.repository_owner"
   }
-  attribute_condition = ""
+  attribute_condition = "attribute.repository==\"${var.GITHUB_REPO.repo_owner}/${var.GITHUB_REPO.repo_name}\""
   oidc {
     issuer_uri        = "https://token.actions.githubusercontent.com"
     allowed_audiences = []
