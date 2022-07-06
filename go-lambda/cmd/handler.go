@@ -18,40 +18,40 @@ func init() {
 
 var logger = log.GetLogger("github.com/shekhar-jha/base-demo", "go-lambda", "cmd")
 
-type Handle func(context Context) errext.Error
+type Handle[Request any, Response any] func(context Context[Request, Response]) errext.Error
 
-type Context interface {
-	GetRequest() interface{}
-	SetResponse(response interface{})
+type Context[Request any, Response any] interface {
+	GetRequest() *Request
+	SetResponse(response Response)
 }
 
-type simpleContext struct {
-	request  interface{}
-	response interface{}
+type simpleContext[Request any, Response any] struct {
+	request  *Request
+	response *Response
 }
 
-func (context *simpleContext) GetRequest() interface{} {
+func (context *simpleContext[Request, Response]) GetRequest() *Request {
 	return context.request
 }
 
-func (context *simpleContext) SetResponse(response interface{}) {
-	context.response = response
+func (context *simpleContext[Request, Response]) SetResponse(response Response) {
+	context.response = &response
 }
 
-type Application interface {
-	RegisterHandler(handle Handle) Application
+type Application[Request any, Response any] interface {
+	RegisterHandler(handle Handle[Request, Response]) Application[Request, Response]
 	Run() errext.Error
 }
 
-func NewApplication() Application {
-	return &simpleApplication{}
+func NewApplication[Request any, Response any]() Application[Request, Response] {
+	return &simpleApplication[Request, Response]{}
 }
 
-type simpleApplication struct {
+type simpleApplication[Request any, Response any] struct {
 	lambdaHandler lambda.Handler
 }
 
-func (app *simpleApplication) RegisterHandler(handler Handle) Application {
+func (app *simpleApplication[Request, Response]) RegisterHandler(handler Handle[Request, Response]) Application[Request, Response] {
 	if os.Getenv("AWS_LAMBDA_RUNTIME_API") != "" {
 		logger.LogWithLevel(log.Info, "AWS Lambda runtime detected")
 		app.lambdaHandler = lambda.NewHandler(lambdaHandler(func(ctx context.Context, bytes []byte) ([]byte, error) {
@@ -61,7 +61,7 @@ func (app *simpleApplication) RegisterHandler(handler Handle) Application {
 	return app
 }
 
-func (app *simpleApplication) Run() errext.Error {
+func (app *simpleApplication[Request, Response]) Run() errext.Error {
 	if app.lambdaHandler != nil {
 		lambda.Start(app.lambdaHandler)
 	}
@@ -87,7 +87,7 @@ const (
 var ErrRequestParsingError = errext.NewErrorTemplate("Parsing Error", "Failed to parse {{ .Data.Parameter }} payload as JSON due to error {{ .Data.ParseError }}")
 var ErrResponseGenerationError = errext.NewErrorTemplate("Response Generation Error", "Failed to generate response payload due to error {{ .Data }}")
 
-func simpleLambdaHandler(handler Handle, ctx context.Context, payload []byte) ([]byte, error) {
+func simpleLambdaHandler[Request any, Response any](handler Handle[Request, Response], ctx context.Context, payload []byte) ([]byte, error) {
 	readData := map[string]interface{}{}
 	unmarshalErr := json.Unmarshal(payload, &readData)
 	if unmarshalErr != nil {
@@ -132,7 +132,22 @@ func simpleLambdaHandler(handler Handle, ctx context.Context, payload []byte) ([
 		eventType = AWS_LAMBDA_INVOKE
 		requestObject = readData
 	}
-	var requestContext = &simpleContext{request: requestObject}
+	var requestObjectAsStruct Request
+	generatedRequest, requestMarshalErr := json.Marshal(requestObject)
+	if requestMarshalErr != nil {
+		return nil, ErrRequestParsingError.New(struct {
+			Parameter  string
+			ParseError error
+		}{Parameter: "ObjectMarshal", ParseError: requestMarshalErr})
+	}
+	requestUnmarshalErr := json.Unmarshal(generatedRequest, &requestObjectAsStruct)
+	if requestUnmarshalErr != nil {
+		return nil, ErrRequestParsingError.New(struct {
+			Parameter  string
+			ParseError error
+		}{Parameter: "Request Object", ParseError: requestUnmarshalErr})
+	}
+	var requestContext = &simpleContext[Request, Response]{request: &requestObjectAsStruct}
 	logger.LogWithLevel(log.Debug, "Invoking handler with context %v, request %#v", ctx, requestContext.request)
 	err := handler(requestContext)
 	logger.LogWithLevel(log.Debug, "Response %#v; Error %v", requestContext.response, err)
