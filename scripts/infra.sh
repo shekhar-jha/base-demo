@@ -6,13 +6,14 @@ INFRA_DEFAULT_HOME=$(pwd)
 function InfraInit {
   if [ "${1}" == "" ] || [ "${2}" == "" ];
   then
-    echo 'InfraInit <Scope> <Infra config type: Terraform> [<Key backend: AWS>] [<INFRA_HOME:'" ${INFRA_DEFAULT_HOME}"'>] [<Return: Exit*|Return>] [Exit code]'
+    echo 'InfraInit <Scope> <Infra config type: Terraform> [<Key backend: AWS>] [<INFRA_HOME:'" ${INFRA_DEFAULT_HOME}"'>] [<Return: Exit*|Return>] [Exit code] [<INFRA_SCRIPT_SRC:'"${INFRA_DEFAULT_HOME}"']'
     ReturnOrExit "${5:-Exit}" "${6:-1}" "1"; return $?
   fi
   local INFRA_SCOPE="${1}"
   local INFRA_TYPE="${2}"
   local INFRA_KEY_BACKEND_TYPE="${3}"
   local INFRA_HOME="${4:-$INFRA_DEFAULT_HOME}"
+  local INFRA_SCRIPT_SRC="${7:-$INFRA_DEFAULT_HOME}"
   local INFRA_BASE
   echo "Initializing ${INFRA_CONFIG_TYPE} state for ${INFRA_SCOPE}..."
   case "${INFRA_TYPE}" in
@@ -21,7 +22,7 @@ function InfraInit {
       IsAvailable f TFInit "Terraform init (TFInit) function"
       INFRA_BASE=$(TFHome "${INFRA_SCOPE}")
       local tfInit_status
-      tfInit_status=$(TFInit "${INFRA_SCOPE}" "${INFRA_HOME}" 'r')
+      tfInit_status=$(TFInit "${INFRA_SCOPE}" "${INFRA_HOME}" "${INFRA_SCRIPT_SRC}" 'r')
       local tfInit_ret_code=$?
       if [[ $tfInit_ret_code -ne 0 ]];
       then

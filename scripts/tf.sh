@@ -177,11 +177,12 @@ function TFCleanup {
 function TFInit {
   if [[ "${1}" == "" ]];
   then
-    echo 'TFInit <Scope> [<TF_HOME:'" ${TF_DEFAULT_HOME}"'>] [<Return: Exit*|Return>] [Exit code]'
-    ReturnOrExit "${3:-Exit}" "${4:-1}" "1"; return $?
+    echo 'TFInit <Scope> [<TF_HOME:'" ${TF_DEFAULT_HOME}"'>] [<TF_SRC:'" ${TF_DEFAULT_HOME}"'>][<Return: Exit*|Return>] [Exit code]'
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "1"; return $?
   fi
   local TF_SCOPE="${1}"
   local TF_HOME="${2:-$TF_DEFAULT_HOME}"
+  local TF_SRC="${3:-$TF_DEFAULT_HOME}"
   local TF_BASE;
   TF_BASE=$(TFHome "${TF_SCOPE}" "${TF_HOME}")
   local TF_PLUGINS="${TF_BASE}/.plugins"
@@ -194,13 +195,20 @@ function TFInit {
   mkdir -p "${TF_PLUGINS}"
   local copy_status
   echo "TFInit: Copying 'tf' files to base directory."
-  copy_status=$(cp -R ./*.tf ./*.tpl "${TF_BASE}" 2>&1)
+  copy_status=$(cp -R "${TF_SRC}"/*.tf "${TF_BASE}" 2>&1)
   local copy_ret_val=$?
   if [ $copy_ret_val -ne 0 ];
   then
-    echo "TFApply: Failed to copy file to terraform home directory with error ${copy_ret_val}. TF_BASE=${TF_BASE}"
+    echo "TFInit: Failed to copy terraform file to terraform home directory with error ${copy_ret_val}. TF_BASE=${TF_BASE}"
     echo "${copy_status}"
-    ReturnOrExit "${3:-Exit}" "${4:-1}" "2"; return $?
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "2"; return $?
+  fi
+  copy_status=$(cp -R "${TF_SRC}"/*.tpl "${TF_BASE}" 2>&1)
+  local copy_ret_val=$?
+  if [ $copy_ret_val -ne 0 ];
+  then
+    echo "TFInit: Ignoring the failure to copy shell and template files to terraform home directory with error ${copy_ret_val}. TF_BASE=${TF_BASE}"
+    echo "${copy_status}"
   fi
   if [ ! -f "${TF_BACKEND_CFG}" ];
   then
@@ -222,7 +230,7 @@ function TFInit {
   then
     echo "TFInit: Failed to initialize terraform with return error code ${init_ret_code}. TF_BASE=${TF_BASE}"
     echo "${init_status}"
-    ReturnOrExit "${3:-Exit}" "${4:-1}" "3"; return $?
+    ReturnOrExit "${4:-Exit}" "${5:-1}" "3"; return $?
   else
     echo "${init_status}"
   fi
