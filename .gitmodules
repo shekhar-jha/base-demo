@@ -1,0 +1,4 @@
+[submodule "common-scripts"]
+	path = go-lambda/infra/common
+	url = https://github.com/shekhar-jha/base-demo
+	branch = scripts
