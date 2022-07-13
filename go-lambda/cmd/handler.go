@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	errext "github.com/shekhar-jha/base-demo/go-utils/pkg/err"
+	errExt "github.com/shekhar-jha/base-demo/go-utils/pkg/err"
 	"github.com/shekhar-jha/base-demo/go-utils/pkg/log"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -18,7 +19,7 @@ func init() {
 
 var logger = log.GetLogger("github.com/shekhar-jha/base-demo", "go-lambda", "cmd")
 
-type Handle[Request any, Response any] func(context Context[Request, Response]) errext.Error
+type Handle[Request any, Response any] func(context Context[Request, Response]) errExt.Error
 
 type Context[Request any, Response any] interface {
 	GetRequest() *Request
@@ -40,7 +41,7 @@ func (context *simpleContext[Request, Response]) SetResponse(response Response) 
 
 type Application[Request any, Response any] interface {
 	RegisterHandler(handle Handle[Request, Response]) Application[Request, Response]
-	Run() errext.Error
+	Run() errExt.Error
 }
 
 func NewApplication[Request any, Response any]() Application[Request, Response] {
@@ -49,6 +50,54 @@ func NewApplication[Request any, Response any]() Application[Request, Response] 
 
 type simpleApplication[Request any, Response any] struct {
 	lambdaHandler lambda.Handler
+	httpHandler   *http.ServeMux
+}
+
+type httpHandler[Request any, Response any] struct {
+	handler Handle[Request, Response]
+}
+
+func (handler *httpHandler[Request, Response]) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	logger.LogWithLevel(log.Debug, "Invoked request with %v", request)
+	var requestObjectMap = map[string]interface{}{}
+	for key, value := range request.URL.Query() {
+		if len(value) >= 1 {
+			requestObjectMap[key] = value[0]
+		}
+	}
+	requestObject, generateErr := createObject[Request](requestObjectMap)
+	if generateErr != nil {
+		writeError(writer, http.StatusInternalServerError, generateErr)
+		return
+	}
+	var simpleContext = &simpleContext[Request, Response]{request: &requestObject}
+	logger.LogWithLevel(log.Debug, "Invoking handler with request %#v", simpleContext.request)
+	err := handler.handler(simpleContext)
+	logger.LogWithLevel(log.Debug, "Response %#v; Error %v", simpleContext.response, err)
+	if err != nil {
+		writeError(writer, http.StatusInternalServerError, err)
+	} else {
+		responseOut, err := json.Marshal(simpleContext.response)
+		if err != nil {
+			writeError(writer, http.StatusInternalServerError, err)
+		} else {
+			writer.WriteHeader(http.StatusOK)
+			writer.Header().Set("Content-Type", "application/json")
+			size, writeErr := writer.Write(responseOut)
+			if writeErr != nil {
+				logger.LogWithLevel(log.Warn, "Failed to write error response %v (only %d written) due to error %v", simpleContext.response, size, writeErr)
+			}
+		}
+	}
+}
+
+func writeError(writer http.ResponseWriter, code int, err errExt.Error) {
+	writer.WriteHeader(code)
+	writer.Header().Set("Content-Type", "application/json")
+	size, writeErr := writer.Write([]byte("{ \"Response\" : \"" + err.Error() + "\"}"))
+	if writeErr != nil {
+		logger.LogWithLevel(log.Warn, "Failed to write response %v (only %d written) due to error %v", err, size, writeErr)
+	}
 }
 
 func (app *simpleApplication[Request, Response]) RegisterHandler(handler Handle[Request, Response]) Application[Request, Response] {
@@ -57,13 +106,26 @@ func (app *simpleApplication[Request, Response]) RegisterHandler(handler Handle[
 		app.lambdaHandler = lambda.NewHandler(lambdaHandler(func(ctx context.Context, bytes []byte) ([]byte, error) {
 			return simpleLambdaHandler(handler, ctx, bytes)
 		}))
+	} else if os.Getenv("PORT") != "" {
+		logger.LogWithLevel(log.Info, "GCP Cloud Run runtime detected.")
+		app.httpHandler = http.NewServeMux()
+		app.httpHandler.Handle("/", &httpHandler[Request, Response]{
+			handler: handler,
+		})
 	}
 	return app
 }
 
-func (app *simpleApplication[Request, Response]) Run() errext.Error {
+var ErrStartupFailed = errExt.NewErrorTemplate("Server Start Failed", "Failed to start server due to error {{ .Error }}")
+
+func (app *simpleApplication[Request, Response]) Run() errExt.Error {
 	if app.lambdaHandler != nil {
 		lambda.Start(app.lambdaHandler)
+	} else {
+		err := http.ListenAndServe(":"+os.Getenv("PORT"), app.httpHandler)
+		if err != nil {
+			return ErrStartupFailed.NewWithError(err)
+		}
 	}
 	return nil
 }
@@ -78,14 +140,13 @@ type ProtocolType int
 
 const (
 	Unknown ProtocolType = iota
-	TCP
-	HTTP
-	AWS_LAMBDA_HTTP
-	AWS_LAMBDA_INVOKE
+	//	Support various protocols like TCP, HTTP, etc
+	AwsLambdaHttp
+	AwsLambdaInvoke
 )
 
-var ErrRequestParsingError = errext.NewErrorTemplate("Parsing Error", "Failed to parse {{ .Data.Parameter }} payload as JSON due to error {{ .Data.ParseError }}")
-var ErrResponseGenerationError = errext.NewErrorTemplate("Response Generation Error", "Failed to generate response payload due to error {{ .Data }}")
+var ErrRequestParsingError = errExt.NewErrorTemplate("Parsing Error", "Failed to parse {{ .Data.Parameter }} payload as JSON due to error {{ .Data.ParseError }}")
+var ErrResponseGenerationError = errExt.NewErrorTemplate("Response Generation Error", "Failed to generate response payload due to error {{ .Data }}")
 
 func simpleLambdaHandler[Request any, Response any](handler Handle[Request, Response], ctx context.Context, payload []byte) ([]byte, error) {
 	readData := map[string]interface{}{}
@@ -101,7 +162,7 @@ func simpleLambdaHandler[Request any, Response any](handler Handle[Request, Resp
 	var eventType ProtocolType
 	if _, isHTTP := asMap(readData, "requestContext", "http"); isHTTP {
 		logger.LogWithLevel(log.Debug, "Request is an Lambda HTTP Request")
-		eventType = AWS_LAMBDA_HTTP
+		eventType = AwsLambdaHttp
 		requestId, _ := asString(readData, "requestContext", "requestId")
 		logger.LogWithLevel(log.Debug, "Request Id %s", requestId)
 		if queryParams, hasQueryParams := asMap(readData, "queryStringParameters"); hasQueryParams {
@@ -129,30 +190,20 @@ func simpleLambdaHandler[Request any, Response any](handler Handle[Request, Resp
 			}
 		}
 	} else {
-		eventType = AWS_LAMBDA_INVOKE
+		eventType = AwsLambdaInvoke
 		requestObject = readData
 	}
-	var requestObjectAsStruct Request
-	generatedRequest, requestMarshalErr := json.Marshal(requestObject)
-	if requestMarshalErr != nil {
-		return nil, ErrRequestParsingError.New(struct {
-			Parameter  string
-			ParseError error
-		}{Parameter: "ObjectMarshal", ParseError: requestMarshalErr})
-	}
-	requestUnmarshalErr := json.Unmarshal(generatedRequest, &requestObjectAsStruct)
-	if requestUnmarshalErr != nil {
-		return nil, ErrRequestParsingError.New(struct {
-			Parameter  string
-			ParseError error
-		}{Parameter: "Request Object", ParseError: requestUnmarshalErr})
+	requestObjectAsStruct, parseErr := createObject[Request](requestObject)
+	if parseErr != nil {
+		return nil, parseErr
 	}
 	var requestContext = &simpleContext[Request, Response]{request: &requestObjectAsStruct}
+
 	logger.LogWithLevel(log.Debug, "Invoking handler with context %v, request %#v", ctx, requestContext.request)
 	err := handler(requestContext)
 	logger.LogWithLevel(log.Debug, "Response %#v; Error %v", requestContext.response, err)
 	switch eventType {
-	case AWS_LAMBDA_INVOKE:
+	case AwsLambdaInvoke:
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +213,7 @@ func simpleLambdaHandler[Request any, Response any](handler Handle[Request, Resp
 		} else {
 			return []byte("{}"), nil
 		}
-	case AWS_LAMBDA_HTTP:
+	case AwsLambdaHttp:
 		var response = events.APIGatewayV2HTTPResponse{
 			StatusCode:        200,
 			Headers:           nil,
@@ -181,8 +232,11 @@ func simpleLambdaHandler[Request any, Response any](handler Handle[Request, Resp
 		}
 		respByte, httpMarshalErr := json.Marshal(response)
 		return respByte, httpMarshalErr
+	case Unknown:
+		unsupportedFormatErr := fmt.Sprintf("Event type has not been set")
+		return nil, ErrResponseGenerationError.New(unsupportedFormatErr)
 	default:
-		unsupportedFormatErr := fmt.Sprintf("Event type %s is not supported", eventType)
+		unsupportedFormatErr := fmt.Sprintf("Event type %d is not supported", eventType)
 		return nil, ErrResponseGenerationError.New(unsupportedFormatErr)
 	}
 }
@@ -241,4 +295,23 @@ func copyMap(src map[string]interface{}, dest map[string]interface{}) {
 	for queryKey, value := range src {
 		dest[queryKey] = value
 	}
+}
+
+func createObject[Request any](requestObject map[string]interface{}) (Request, errExt.Error) {
+	var requestObjectAsStruct Request
+	generatedRequest, requestMarshalErr := json.Marshal(requestObject)
+	if requestMarshalErr != nil {
+		return requestObjectAsStruct, ErrRequestParsingError.New(struct {
+			Parameter  string
+			ParseError error
+		}{Parameter: "ObjectMarshal", ParseError: requestMarshalErr})
+	}
+	requestUnmarshalErr := json.Unmarshal(generatedRequest, &requestObjectAsStruct)
+	if requestUnmarshalErr != nil {
+		return requestObjectAsStruct, ErrRequestParsingError.New(struct {
+			Parameter  string
+			ParseError error
+		}{Parameter: "Request Object", ParseError: requestUnmarshalErr})
+	}
+	return requestObjectAsStruct, nil
 }
