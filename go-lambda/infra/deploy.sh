@@ -64,6 +64,9 @@ fi
 if [[ "${CLOUD_ACCT}" == "" ]]; then
   usage
 fi
+if [[ "${CLOUD_PROJECT}" == "" ]] && [[ "${INFRA_CLOUD_TYPE}" == "GCP" ]]; then
+  usage
+fi
 
 export INFRA_CLOUD_TYPE="${INFRA_CLOUD_TYPE}"
 export INFRA_IAC_TYPE='Terraform'
@@ -73,18 +76,46 @@ export CLOUD_REGION="${CLOUD_DEFAULT_REGION}"
 env_name=$(echo "${ENV_NAME}" | tr '[:upper:]' '[:lower:]')
 export env_name
 
-CloudInit "${ENV_NAME}" "${INFRA_CLOUD_TYPE}" profile "${CLOUD_ACCT}" 'e' 1
-export TF_VAR_AWS_ENV_AUTH="${CLOUD_PROFILE}"
+if [[ "${INFRA_CLOUD_TYPE}" == "GCP" ]]; then
+  CloudSetConfig "${env_name}" "${INFRA_CLOUD_TYPE}" "project" "${CLOUD_PROJECT}" '' 'e' 11
+  CloudSetConfig "${env_name}" "${INFRA_CLOUD_TYPE}" "replication-policy" "user-managed" 'secrets' 'e' 12
+  CloudSetConfig "${env_name}" "${INFRA_CLOUD_TYPE}" "locations" "${CLOUD_DEFAULT_REGION}" 'secrets' 'e' 13
+  CloudSetConfig "${env_name}" "${INFRA_CLOUD_TYPE}" "region" "${CLOUD_DEFAULT_REGION}" 'run' 'e' 14
+  export TF_VAR_GCP_PROJECT="${CLOUD_PROJECT}"
+  export TF_VAR_GCP_REGION="${CLOUD_DEFAULT_REGION}"
+  CloudInit "${env_name}" "${INFRA_CLOUD_TYPE}" 'adc' '' 'e' 15
+  CURRENT_ID=$(CloudGetResource "${env_name}" "${INFRA_CLOUD_TYPE}" "CurrentIdentity" "NA" 'r')
+  get_id_status=$?
+  if [[ "${CURRENT_ID}" == "" ]] || [[ $get_id_status -ne 0 ]]; then
+    echo "Failed to get current identity."
+    exit 16
+  else
+    # TODO: how to differentiate between type of account i.e. user vs service.
+    export TF_VAR_GCP_ID="user:${CURRENT_ID}"
+  fi
+  GCPActivate "${env_name}" "secrets" 'e' 17
+  # Activating build since it takes much longer to activate and sometimes
+  # immediate calls fail.
+  GCPActivate "${env_name}" "build" 'e' 18
+  export TF_SCRIPT_DIR="gcp"
+elif [[ "${INFRA_CLOUD_TYPE}" == "AWS" ]]; then
+  CloudInit "${ENV_NAME}" "${INFRA_CLOUD_TYPE}" profile "${CLOUD_ACCT}" 'e' 1
+  export TF_VAR_AWS_ENV_AUTH="${CLOUD_PROFILE}"
+  export TF_SCRIPT_DIR="aws"
+else
+  echo "Unsupported Cloud type ${INFRA_CLOUD_TYPE}"
+  exit 19
+fi
 
 if [[ ! -d "${env_name}_terraform" ]]; then
   INFRA_STORE_BUCKET=$(CloudGetResource "${env_name}" "${INFRA_CLOUD_TYPE}" "FileStore" "${env_name}-go-lambda-tf-state")
   export INFRA_STORE_BUCKET
   InfraLoadState "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_CLOUD_TYPE}" "${INFRA_STORE_BUCKET}" '' 'r'
 fi
-InfraInit "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 6 'aws'
+InfraInit "${env_name}" "${INFRA_IAC_TYPE}" "${INFRA_CLOUD_TYPE}" '' 'e' 6 "${TF_SCRIPT_DIR}"
 InfraApply "${env_name}" "${INFRA_IAC_TYPE}" 'Update' '' '' 'r' 8
 APPLY_RET_CODE=$?
-bucketId=$(InfraGetConfig "${env_name}" "aws_s3_tf_state_id" "${INFRA_IAC_TYPE}" '' '' 'e' 7)
+bucketId=$(InfraGetConfig "${env_name}" "STATE_BUCKET_ID" "${INFRA_IAC_TYPE}" '' '' 'e' 7)
 if [[ $APPLY_RET_CODE -ne 1 ]]; then
   echo "All changes applied."
 #  echo "Deleting plugins to reduce size"
