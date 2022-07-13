@@ -47,6 +47,8 @@ function GCPSourceRepoInit {
     ReturnOrExit "${4:-Exit}" "${5:-1}" "2"
     return $?
   fi
+  echo "GCPSourceRepoPush: Adding files...."
+  git "--git-dir=${SRC_BASE}/.git" "--work-tree=${SRC_BASE}/" fetch
 }
 
 function GCPSourceRepoCopy {
@@ -115,7 +117,7 @@ function GCPSourceRepoPush {
     return $?
   fi
   echo "GCPSourceRepoPush: Pushing updates...."
-  git "--git-dir=${SRC_BASE}/.git" "--work-tree=${SRC_BASE}/" push
+  git "--git-dir=${SRC_BASE}/.git" "--work-tree=${SRC_BASE}/" push origin main
   copy_ret_val=$?
   if [[ $copy_ret_val -ne 0 ]]; then
     echo "GCPSourceRepoPush: Failed to push update to ${SRC_NAME} with error ${copy_ret_val}. SRC_BASE=${SRC_BASE}"
