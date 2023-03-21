@@ -1,0 +1,13 @@
+{
+    "TableName": "Messages",
+    "KeySchema": [
+      { "AttributeName": "Name", "KeyType": "HASH" }
+    ],
+    "AttributeDefinitions": [
+      { "AttributeName": "Name", "AttributeType": "S" }
+    ],
+    "ProvisionedThroughput": {
+      "ReadCapacityUnits": 5,
+      "WriteCapacityUnits": 5
+    }
+}

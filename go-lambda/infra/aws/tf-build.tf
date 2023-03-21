@@ -22,7 +22,8 @@ resource "null_resource" "build_go" {
     fi
     cd "$TF_DIR"
     rm "${local.go_lambda_zip_path}"
-    zip ${local.go_lambda_zip_path} ./${local.go_lambda_handler_name}
+    cp ./../docker/config.cfg ./
+    zip ${local.go_lambda_zip_path} ./${local.go_lambda_handler_name} ./config.cfg
     CompileAndZip
   }
 }
