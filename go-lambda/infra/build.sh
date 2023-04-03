@@ -102,13 +102,25 @@ LOCAL_MODE=${LOCAL_MODE:-false}
 INFRA_CLOUD_TYPE=$(echo "${INFRA_CLOUD_TYPE}" | tr '[:upper:]' '[:lower:]')
 CODE_DIR="${SCRIPT_DEFAULT_HOME}/../cmd"
 CODE_CHECK_FILE="${CODE_DIR}/go.mod"
-APP_NAME="app"
+APP_NAME="lambdaMain"
 DOCKER_DIR="${SCRIPT_DEFAULT_HOME}/docker"
 DOCKER_FILE_NAME="Dockerfile-${INFRA_CLOUD_TYPE}"
+PACKAGE_DIR="${SCRIPT_DEFAULT_HOME}/package-build"
+CFG_DIR="${SCRIPT_DEFAULT_HOME}/cfg"
 IMG_NAME="${IMG_NAME:-base-demo}"
 IMG_EXPOSE_PORT="${IMG_EXPOSE_PORT:-8080}"
 DYNAMODB_PORT=8000
 DYNAMODB_ENDPOINT="http://localhost:${DYNAMODB_PORT}"
+
+if [[ ! -d $PACKAGE_DIR ]]; then
+  echo "Creating packaging directory at ${PACKAGE_DIR}"
+  mkdir -p "${PACKAGE_DIR}"
+  dir_err=$?
+  if [[ $dir_err -ne 0 ]]; then
+    echo "Failed to create directory for packaging at ${PACKAGE_DIR}"
+    exit 11
+  fi
+fi
 
 if [[ "${SKIP_BUILD}" == "false" ]]; then
   if [[ ! -f "${CODE_CHECK_FILE}" ]]; then
@@ -117,7 +129,7 @@ if [[ "${SKIP_BUILD}" == "false" ]]; then
   else
     echo "Building code...."
     cd "${CODE_DIR}" || exit 3
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "${DOCKER_DIR}/${APP_NAME}" "."
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "${PACKAGE_DIR}/${APP_NAME}" "."
     build_status=$?
     if [[ $build_status -ne 0 ]]; then
       echo "Build failed."
@@ -128,18 +140,24 @@ else
   echo "Skipping build..."
 fi
 
+export env=${ENV_NAME}
+export APP_NAME=$APP_NAME
+envsubst '$env' < "${CFG_DIR}/config.cfg" > "${PACKAGE_DIR}/config.cfg"
+envsubst '$APP_NAME' < "${DOCKER_DIR}/${DOCKER_FILE_NAME}" > "${PACKAGE_DIR}/${DOCKER_FILE_NAME}"
+sed -i '' -e 's/\$\$/\$/g' "${PACKAGE_DIR}/${DOCKER_FILE_NAME}"
+
 if [[ "${SKIP_CONTAINER}" == "false" ]]; then
-  if [[ -f "${DOCKER_DIR}/${DOCKER_FILE_NAME}" ]]; then
+  if [[ -f "${PACKAGE_DIR}/${DOCKER_FILE_NAME}" ]]; then
     ImageCleanup "${IMG_NAME}" || exit 5
     echo "Creating container..."
-    docker build -f "${DOCKER_DIR}/${DOCKER_FILE_NAME}" --build-arg "APP_NAME=${APP_NAME}" --build-arg "LOG_ENABLED=1" --build-arg "EXPOSED_PORT=${IMG_EXPOSE_PORT}" -t "${IMG_NAME}" "${DOCKER_DIR}"
+    docker build -f "${PACKAGE_DIR}/${DOCKER_FILE_NAME}" --build-arg "APP_NAME=${APP_NAME}" --build-arg "LOG_ENABLED=1" --build-arg "EXPOSED_PORT=${IMG_EXPOSE_PORT}" -t "${IMG_NAME}" "${PACKAGE_DIR}"
     build_err=$?
     if [[ $build_err -ne 0 ]]; then
       echo "Failed to build docker image ${IMG_NAME} due to error ${build_err}"
       exit 6
     fi
   else
-    echo "Could not locate container file ${DOCKER_DIR}/${DOCKER_FILE_NAME}"
+    echo "Could not locate container file ${PACKAGE_DIR}/${DOCKER_FILE_NAME}"
   fi
 else
   echo "Skipping container creation.."
@@ -147,7 +165,7 @@ fi
 
 if [[ "${LOCAL_MODE}" == "true" ]]; then
   echo "Starting a new container for ${IMG_NAME}"
-  docker run -d -p 9000:8080 -h "${IMG_NAME}" --name "${IMG_NAME}" ${IMG_NAME}
+  docker run -d -p 9000:8080 -h "${IMG_NAME}" --name "${IMG_NAME}" --env "CFG_ENV_NAME=local" ${IMG_NAME}
   run_err=$?
   if [[ $run_err -ne 0 ]]; then
     echo "Failed to start container ${IMG_NAME} due to error ${run_err}"
@@ -162,12 +180,13 @@ if [[ "${LOCAL_MODE}" == "true" ]]; then
     dynamodb_result=$?
     if [[ $dynamodb_result -ne 0 ]]; then
       echo "Failed to start a new instance of dynamodb"
+      exit 9
     fi
   fi
   TABLE_CHECK="Messages"
   table_output=$(aws dynamodb list-tables --endpoint-url "${DYNAMODB_ENDPOINT}" --region "us-east-1" --output text --query "TableNames[?@=='${TABLE_CHECK}']")
   table_result=$?
-  if [[ table_result -ne 0 ]]; then
+  if [[ $table_result -ne 0 ]]; then
     echo "Failed to check whether table ${TABLE_CHECK} exists due to error ${table_result}"
     exit 8
   else
@@ -177,6 +196,11 @@ if [[ "${LOCAL_MODE}" == "true" ]]; then
       export AWS_SECRET_ACCESS_KEY=dummy
       export AWS_SESSION_TOKEN=dummy
       aws dynamodb create-table --cli-input-json file://${DOCKER_DIR}/dynamodb-ddl.json --region "us-east-1" --endpoint-url "${DYNAMODB_ENDPOINT}"
+      create_table_result=$?
+      if [[ $create_table_result -ne 0 ]]; then
+        echo "Failed to create dynamodb table using ${DOCKER_DIR}/dynamodb-ddl.json due to error $create_table_result"
+        exit 10
+      fi
     else
       echo "Table ${TABLE_CHECK} already exists. No update needed on dynamodb"
     fi
