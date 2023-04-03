@@ -1,4 +1,4 @@
-package main
+package cfg
 
 import (
 	"context"
@@ -13,6 +13,7 @@ const (
 	ErrCfgParamConfigParamValue = "value"
 	ErrCfgParamOps              = "operation"
 	ErrCfgParamOpsLoad          = "load"
+	ErrCfgParamOpsSetContexts   = "set-context"
 )
 
 type ConfigFormat string

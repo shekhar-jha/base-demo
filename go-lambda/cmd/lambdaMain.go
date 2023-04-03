@@ -5,25 +5,38 @@ import (
 	"fmt"
 	"github.com/grinps/go-utils/base-utils/logs"
 	"github.com/grinps/go-utils/errext"
+	"github.com/shekhar-jha/base-demo/go-lambda/cmd/cfg/viper"
+	"github.com/shekhar-jha/base-demo/go-lambda/cmd/common"
+	db2 "github.com/shekhar-jha/base-demo/go-lambda/cmd/db"
+	"github.com/shekhar-jha/base-demo/go-lambda/cmd/db/dynamodb"
 	"os"
 	"sync"
 )
 
 var ErrMissingRequest = errext.NewErrorCodeWithOptions(errext.WithTemplate("No request detail was provided."))
 
+const ErrParamOps = "operation"
+const EnvCfgEnvName = "CFG_ENV_NAME"
+
 var ErrInitFailed = errext.NewErrorCodeWithOptions(errext.WithTemplate("Failed to perform", "[operation]", "during initialization due to", "[error]"))
 
 func initialize() error {
 	ctx := context.TODO()
-	cfg, cfgErr := NewViperConfigE(ctx, "config.cfg", []string{"./"})
+	contexts := []string{}
+	envName := os.Getenv(EnvCfgEnvName)
+	if envName != "" {
+		contexts = append(contexts, envName)
+	}
+	contexts = append(contexts, viper.DefaultContext)
+	cfg, cfgErr := viper.NewViperConfigE(ctx, "config.cfg", []string{"./"}, viper.SetConfigHierarchy(ctx, contexts...))
 	if cfgErr != nil {
 		logger.Warn("Failed to load configuration config.cfg from ./", cfgErr)
-		return ErrInitFailed.NewWithErrorF(cfgErr, ErrDBParamOps, "configuration load", ErrParamCause, cfgErr)
+		return ErrInitFailed.NewWithErrorF(cfgErr, ErrParamOps, "configuration load", common.ErrParamCause, cfgErr)
 	}
-	localDb, newErr := NewDynamoDBE(ctx, SetupWithConfig(ctx, cfg))
+	localDb, newErr := dynamodb.NewDynamoDBE(ctx, dynamodb.SetupWithConfig(ctx, cfg))
 	if newErr != nil {
 		logger.Warn("Failed to open database due to error", newErr)
-		return ErrInitFailed.NewWithErrorF(newErr, ErrDBParamOps, "database open", ErrParamCause, newErr)
+		return ErrInitFailed.NewWithErrorF(newErr, ErrParamOps, "database open", common.ErrParamCause, newErr)
 	}
 	db = localDb
 	return nil
@@ -39,7 +52,7 @@ type Message struct {
 
 var doOnce sync.Once
 var initErr error
-var db Database
+var db db2.Database
 
 func HandleRequest[Request MyEvent, Response Message](ctx Context[MyEvent, Message]) error {
 	doOnce.Do(func() {

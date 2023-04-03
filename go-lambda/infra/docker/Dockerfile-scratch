@@ -1,0 +1,14 @@
+FROM gcr.io/distroless/static
+ARG EXPOSED_PORT=8080
+EXPOSE $${EXPOSED_PORT}
+ARG LOG_ENABLED=1
+ARG ENV_NAME=local
+ENV TRACE_LOG_UTIL_ENABLE $LOG_ENABLED
+ENV CFG_ENV_NAME $ENV_NAME
+USER nobody
+
+COPY ${APP_NAME} /${APP_NAME}
+COPY config.cfg /config.cfg
+ENTRYPOINT [ "/${APP_NAME}" ]
+# ENTRYPOINT [ "/entry.sh" ]
+# CMD [ "/${APP_NAME}" ]
